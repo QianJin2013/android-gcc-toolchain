@@ -28,17 +28,26 @@ Should also works on Linux (not tested yet).
 - **Cross-compile gyp/autoconf project easily.**
 
     - For gyp build, e.g. Node.JS:
-
-    ```
-    $ android-gcc-toolchain arm64 -c ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
-    $ android-gcc-toolchain arm64 -c make -j4 
-    ```
+    
+        ```
+        $ android-gcc-toolchain arm64 -c ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
+        $ android-gcc-toolchain arm64 -c make -j4 
+        ```
+    
+        The `-c` means pass env `CC=toolchain's gcc`... to later command. 
+        To pass env `CC_target`, use `-C` option.
+        
+        <sub>
+        Besides, normally, once configure ok, $CC is saved to Makefile so can just call `make`, 
+        but some sub project may still depends on $CC, so it's safe to wrap the `make` command with this tool.
+        </sub>
+    
     - For autoconf build, e.g. ffmpeg:
-
-    ```
-    $ ./configure --enable-cross-compile --cross-prefix=`android-gcc-toolchain arm64` --target-os=linux ...
-    $ make -j4
-    ```
+    
+        ```
+        $ ./configure --enable-cross-compile --cross-prefix=`android-gcc-toolchain arm64` --target-os=linux --arch=arm64 ...
+        $ make -j4
+        ```
 
 - **Enter a dedicated environment where can run android gcc related commands directly.**
 
