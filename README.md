@@ -4,9 +4,9 @@ A single command to enter android cross compile environment without manually cre
 Tested on Mac OS X 10.11.5 EI Capitan, NDK 12.1.29.  
 Should also works on Linux (not tested yet).
 
-![](doc/android-gcc.png)
-![](doc/android-gcc-enter.png)
-![](doc/android-gcc-toolchain.png)
+![android-gcc](doc/android-gcc.png)
+![android-gcc-toolchain](doc/android-gcc-toolchain.png)
+![android-gcc-enter](doc/android-gcc-enter.png)
 
 
 ###Features/Ideas
