@@ -35,8 +35,8 @@ Should also works on Linux (not tested yet).
         ```
     
         The `-c` means pass env `CC=toolchain's gcc`... to later command. 
-        To pass env `CC_target`, use `-C` option, 
-        so can use local cc to compile host(my machine) side and $CC_target to compile target(android) side.
+        To pass env `CC_target`, use `-C` option (
+        so can use host cc to compile host(my machine) side and $CC_target to compile target(android) side.)
                 
         Once configure ok, $CC is saved to Makefile, 
         but sub project may still depends on $CC, 
