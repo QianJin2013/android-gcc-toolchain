@@ -148,7 +148,7 @@ source ~/Downloads/android-gcc-toolchain/bashrc --restore
 
     `$NDK/std-toolchains/android-APIL-ARCH`
 
-    This is not for easy management, but also for some commands e.g. 
+    This is not only for easy management, but also for some commands e.g. 
     `ndk-gdb`,`ndk-which`... call neighbour files from this dir level.
     This is only necessary for `android-gcc-enter`'s dedicated environment
     where `ndk-*` be redirected so need keep it works as normal.
