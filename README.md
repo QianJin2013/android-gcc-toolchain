@@ -27,7 +27,7 @@ Should also works on Linux (not tested yet).
     
 2. **Cross-compile gyp/autoconf project easily.**
 
-    - For gyp build, e.g. NodeJS.
+    - **For gyp build, e.g. NodeJS.**
     
         ```
         $ android-gcc-toolchain arm64 -c ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
@@ -35,15 +35,14 @@ Should also works on Linux (not tested yet).
         ```
     
         The `-c` means pass env `CC=toolchain's gcc`... to later command. 
-        To pass env `CC_target`, use `-C` option.
-        
-        <sub>
+        To pass env `CC_target`, use `-C` option, 
+        so can use local cc to compile host(my machine) side and $CC_target to compile target(android) side.
+                
         Once configure ok, $CC is saved to Makefile, 
         but sub project may still depends on $CC, 
         so it's safe to wrap the `make` command with this tool.
-        </sub>
     
-    - For autoconf build, e.g. ffmpeg.
+    - **For autoconf build, e.g. ffmpeg.**
     
         ```
         $ ./configure --enable-cross-compile --cross-prefix=`android-gcc-toolchain arm64` --target-os=linux --arch=arm64 ...
@@ -52,7 +51,7 @@ Should also works on Linux (not tested yet).
 
 3. **Enter a dedicated environment where can run android gcc related commands directly.**
 
-    - `android-gcc-enter` to run cc c++ gdb readelf make python ... without path.
+    - **`android-gcc-enter` to run cc c++ gdb readelf make python etc. without path.**
 
         ```
         $ android-gcc-enter arm64
@@ -63,7 +62,7 @@ Should also works on Linux (not tested yet).
         [android-21-arm64] $ android-gcc-leave
         $ 
         ```
-    - `android-gcc-toolchain -c` to start a separate bash so can run $CC ...
+    - **`android-gcc-toolchain -c` to start a separate bash so can run $CC etc.**
     
         It just set $CC,$CXX,$LINK,$LD,... for the new bash instead of changing $PATH
         ```
