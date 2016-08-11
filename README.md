@@ -100,7 +100,7 @@ Should also works on Linux (not tested yet).
      --force        delete existing toolchain dir then create
      ...
     ```
-    Option keyword itself(`--arch`,`--api`,`--stl`) can be omitted. Order is not cared.
+    Option keyword itself(`--arch`,`--api`,`--stl`) can be omitted. Order does not care.
     
     The `android-gcc` and `android-gcc++` is controlled by $`ARCH`, $`APIL`, $`STL`, 
     the toolchain will also be created if not exists. 
