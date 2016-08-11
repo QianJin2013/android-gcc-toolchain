@@ -28,22 +28,40 @@ Should also works on Linux (not tested yet).
 2. **Cross-compile gyp/autoconf project easily.**
 
     - **For gyp build, e.g. NodeJS.**
-    
+
+        ```
+        $ android-gcc-enter arm64
+        ...
+        [android-21-arm64] $ ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
+        [android-21-arm64] $ make -j4
+        ```
+        This is the safest way to build target(android)-only output because all compiler related commands are redirected to the toolchain. 
+
+        Alternatively, you can
         ```
         $ android-gcc-toolchain arm64 -c ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
         $ android-gcc-toolchain arm64 -c make -j4 
         ```
-    
-        The `-c` means pass env `CC=toolchain's gcc`... to later command. 
-        To pass env `CC_target`, use `-C` option (
-        so can use host cc to compile host(my machine) side and $CC_target to compile target(android) side.)
-                
+        The `-c` means pass env `CC=toolchain's gcc`... to later command.  
+        To pass env `CC_target`, use upper case `-C` option (
+        **so can use host cc to compile host(my machine) side and $CC_target to compile target(android) side, this is the most complicated case.**)
+
+        Note:                
         Once configure ok, $CC is saved to Makefile, 
-        but sub project may still depends on $CC, 
+        **But** sub project may still depends on $CC, 
         so it's safe to wrap the `make` command with this tool.
+
+        Worst case is, some bad written build script does not respect $CC or $CC_target, they may use host(my machine)'s ar ranlib etc. so cause error finally. 
+
+        The above command can also be done by enter a new bash then run configure and make.
+        ```
+        $ android-gcc-toolchain arm64 -c  ### or -C if you build both host and target.
+        bash-3.2$ ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
+        bash-3.2$ make -j4
+        ```
     
     - **For autoconf build, e.g. ffmpeg.**
-    
+        
         ```
         $ ./configure --enable-cross-compile --cross-prefix=`android-gcc-toolchain arm64` --target-os=linux --arch=arm64 ...
         $ make -j4
@@ -62,6 +80,8 @@ Should also works on Linux (not tested yet).
         [android-21-arm64] $ android-gcc-leave
         $ 
         ```
+        You can do safest cross-compile as shown in section 2, and even compile some non-cross-compilable project.
+
     - **`android-gcc-toolchain -c` to start a separate bash so can run $CC etc.**
     
         It just set $CC,$CXX,$LINK,$LD,... for the new bash instead of changing $PATH
@@ -72,6 +92,8 @@ Should also works on Linux (not tested yet).
         bash-3.2$ $CC  a.c
         bash-3.2$ exit
         ```
+        You can do cross-compile as shown in section 2.
+
         Similarly, there are an upper case `-C` option provide $CC_target etc.
         ```
         $ android-gcc-toolchain arm64 -C
