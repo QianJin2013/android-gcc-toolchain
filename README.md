@@ -11,7 +11,7 @@ Should also works on Linux (not tested yet).
 
 ###Features/Ideas
 
-- **Run android gcc related commands easily.**
+1. **Run android gcc related commands easily.**
 
     ```
     $ android-gcc  a.c
@@ -25,7 +25,7 @@ Should also works on Linux (not tested yet).
     ```
     Obviously, options are same as original gcc,g++, yet with the ability to specify toolchain's arch, api level etc.
     
-- **Cross-compile gyp/autoconf project easily.**
+2. **Cross-compile gyp/autoconf project easily.**
 
     - For gyp build, e.g. NodeJS.
     
@@ -50,7 +50,7 @@ Should also works on Linux (not tested yet).
         $ make -j4
         ```
 
-- **Enter a dedicated environment where can run android gcc related commands directly.**
+3. **Enter a dedicated environment where can run android gcc related commands directly.**
 
     - `android-gcc-enter` to run cc c++ gdb readelf make python ... without path.
 
@@ -65,17 +65,24 @@ Should also works on Linux (not tested yet).
         ```
     - `android-gcc-toolchain -c` to start a separate bash so can run $CC ...
     
-        It does not change $PATH.
+        It just set $CC,$CXX,$LINK,$LD,... for the new bash instead of changing $PATH
         ```
         $ android-gcc-toolchain arm64 -c
         bash-3.2$ echo $CC
         /Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-21-arm64/bin/gcc
         bash-3.2$ $CC  a.c
         bash-3.2$ exit
-        $ 
         ```
+        Similarly, there are an upper case `-C` option provide $CC_target etc.
+        ```
+        $ android-gcc-toolchain arm64 -C
+        bash-3.2$ echo $CC_target 
+        /Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-21-arm64/bin/gcc
+        bash-3.2$ exit
+        ```
+        This is for some complicated build system which build both host and target output.
 
-- **Automatically create standalone toolchain the first time.**
+4. **Automatically create standalone toolchain the first time.**
 
     With same command-line options of 
     $NDK/build/tools/make_standalone_toolchain.py (except for --install-dir options of course).    
@@ -99,7 +106,7 @@ Should also works on Linux (not tested yet).
     The `android-gcc` and `android-gcc++` is controlled by $`ARCH`, $`APIL`, $`STL`, 
     the toolchain will also be created if not exists. 
     
-- **Automatically get minimum/maximum `Android API level` from NDK.**
+5. **Automatically get minimum/maximum `Android API level` from NDK.**
 
     ```
     $ android-gcc-toolchain --api max
@@ -108,11 +115,12 @@ Should also works on Linux (not tested yet).
     ```
     By default, get minimum API level from NDK for specified arch.
 
-- (TODO): Use symbol/hard link to speed up creation of toolchain and save disk space. 
-- (TODO): Auto detect NDK, auto download NDK optionally. 
-- (TODO): Support bash-completion. 
-- (TODO): Support brew install. 
-- (TODO): Create a docker container for this tool. 
+6. **(TODO) Miscellaneous**
+    - (TODO): Use symbol/hard link to speed up creation of toolchain and save disk space. 
+    - (TODO): Auto detect NDK, auto download NDK optionally. 
+    - (TODO): Support bash-completion. 
+    - (TODO): Support brew install. 
+    - (TODO): Create a docker container for this tool. 
 
 ###Prerequisite
 
