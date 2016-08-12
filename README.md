@@ -1,7 +1,7 @@
 ## android-gcc-toolchain
 A single command to enter android cross compile environment without manually create NDK standalone toolchain. 
 
-Tested on Mac OS X 10.11.5 EI Capitan, NDK 12.1.29.  
+Tested on Mac OS X 10.11.5/10.11.6 EI Capitan, NDK 12.1.29.  
 Should also works on Linux (not tested yet).
 
 ![android-gcc](doc/android-gcc.png)
@@ -219,6 +219,10 @@ source ~/Downloads/android-gcc-toolchain/bashrc --restore
          commonly linked lib: /usr/lib/libSystem.B.dylib
     
     For example, to **compile Node.JS WITHOUT anything disabled**, on Mac OS X.
+    
+    NodeJS is the latest master version, at least 6.3.1
+    (HEAD is https://github.com/nodejs/node/commit/b9487449e151b02ff8cb1f3b4a0311e9eb0878e2)
+    
     ```
     $ GYP_DEFINES=host_os=mac android-gcc-toolchain arm64 --hack -C
     bash-3.2$ ./configure --dest-cpu=arm64 --dest-os=android
