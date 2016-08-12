@@ -1,0 +1,33 @@
+#!/bin/bash
+function msg {
+	echo "$@" 1>&2
+}
+
+if [[ ! -x $AR_target || ! -x $_AR_host ]]; then
+	msg "[mac-or-android-ar] AR_target and _AR_host not defined or not executable."
+	exit 1
+fi
+
+OBJ_FILE=""
+for f in "$@"; do
+	#find a non-zero *.o file
+	if [[ ${f/*.} == o && -s $f ]]; then
+		OBJ_FILE=$f
+		break
+	fi
+done
+
+if [[ $OBJ_FILE ]]; then
+	#check .o file archive header by target objdump, if OK, then run target ar
+	if "${AR_target%/*}/objdump" -a "$OBJ_FILE" > /dev/null 2>/dev/null; then
+		msg "[mac-or-android-ar] call android-ar: \"$AR_target\""
+		exec "$AR_target" "$@"
+		exit
+	fi
+else
+	msg "[mac-or-android-ar] no any non-empty *.o file provided for check OS type."
+fi
+
+#otherwise call host ar
+msg "[mac-or-android-ar] call mac-ar \"$f\""
+exec "$_AR_host" "$@"

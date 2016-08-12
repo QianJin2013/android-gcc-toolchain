@@ -28,7 +28,8 @@ function _agcc-toolchain {
 			arm|arm64|x86|x86_64|mips|mips64) ARCH=$1 ;;
 			min|max|0                       ) APIL=$1 ;;
 			gnustl|libc++|stlport           ) STL=$1 ;;
-			-c|-C                           ) break ;;
+			-c|-C                           ) break ;; #stop parse due to the later args is command and its args
+			-*                              ) : ;; #skip unrelated option keyword
 			*                               ) [[ $1 -gt 0 ]] && APIL=$1 ;;
 		esac
 		shift
@@ -150,13 +151,10 @@ function android-gcc-enter {
 		_agcc-msg "   STL          {gnustl(default)|libc++|stlport}"
 		_agcc-msg " --force        delete existing toolchain dir then create"
 		_agcc-msg ""
-		_agcc-msg "The cross-compile commands are:"
-		_agcc-msg " cc(->gcc)"
-		_agcc-msg " gcc g++ c++ cpp clang clang++ ld ar as ranlib strip"
+		_agcc-msg "Toolchain commands: (most are link to file like arm-linux-androideabi-xxx)"
+		_agcc-msg " cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip"
 		_agcc-msg " readelf objdump nm c++filt strings elfedit objcopy"
 		_agcc-msg " addr2line size gcov gprof dwp"
-		_agcc-msg ""
-		_agcc-msg "The other related commands are:"
 		_agcc-msg " gdb yasm llvm-as llvm-dis llvm-link FileCheck"
 		_agcc-msg " make awk python pydoc"
 		_agcc-msg " ndk-depends ndk-gdb ndk-which ndk-stack"
@@ -190,9 +188,8 @@ function android-gcc-enter {
 	echo "# The follwoing bin dir has been prepended to \$PATH."
 	echo "#  \"\$NDK/std-toolchains/$ANDROID_GCC_TAG/bin\""
 	echo "# "
-	echo "# So you can use its cross-compile and related commands directly here:"
-	echo "#  cc(->gcc)"
-	echo "#  gcc g++ c++ cpp clang clang++ ld ar as ranlib strip"
+	echo "# So you can use these commands directly here:"
+	echo "#  cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip"
 	echo "#  readelf objdump nm c++filt strings elfedit objcopy"
 	echo "#  addr2line size gcov gprof dwp"
 	echo "#  gdb yasm llvm-as llvm-dis llvm-link FileCheck"
@@ -225,8 +222,9 @@ function android-gcc-leave {
 
 function android-gcc-toolchain {
 	if [[ $1 == --help ]]; then
-		_agcc-msg "Switch toolchain(create if) & show path of cross-compile and related commands."
-		_agcc-msg "Options: [[--arch] ARCH］[[--api] APIL] [[--stl] STL] [--force] [--cross]"
+		_agcc-msg "Switch toolchain(create if) & show path of toolchain bin dir."
+		_agcc-msg "Options: [[--arch] ARCH］[[--api] APIL] [[--stl] STL] [--force]"
+		_agcc-msg "         [--cross] [--hack]"
 		_agcc-msg "         [-c|-C [command [arguments] ]"
 		_agcc-msg " --arch ARCH    Android architecture"
 		_agcc-msg "   ARCH         {arm(default)|arm64|x86|x86_64|mips|mips64}"
@@ -234,40 +232,49 @@ function android-gcc-toolchain {
 		_agcc-msg "   APIL         {min(default)|max|an integer}"
 		_agcc-msg " --stl STL      C++ STL to use"
 		_agcc-msg "   STL          {gnustl(default)|libc++|stlport}"
-		_agcc-msg " --force        delete existing toolchain dir then create"
-		_agcc-msg " --cross        show prefix of cross-compile commands instead of bin dir"
-		_agcc-msg " -c|-C command  run command with cross-compile env."
-		_agcc-msg ""
-		_agcc-msg "-c command ...: following env vars will be passed to followed command:"
-		_agcc-msg " CC,CXX,LD,AR,AS,RANLIB,STRIP,NM,LINK"
-		_agcc-msg " e.g. CC=\"\$NDK/std-toolchains/android-9-arm/bin/gcc\""
-		_agcc-msg "If command is omitted, then bash."
-		_agcc-msg ""
-		_agcc-msg "-C command ...: almost same as -c option, the env vars name are:"
-		_agcc-msg " CC_target,..."
-		_agcc-msg ""
-		_agcc-msg "Without -c or -C options, output will be a path. e.g."
-		_agcc-msg "  \$NDK/std-toolchains/android-9-arm/bin/"
-		_agcc-msg ""
-		_agcc-msg "--cross means append arch prefix to all above bin path, e.g."
-		_agcc-msg "  bin/ -> bin/arm-linux-androideabi-"
-		_agcc-msg ""
-		_agcc-msg "The original cross-compile commands are:"
-		_agcc-msg "(all are links. e.g. gcc -> arm-linux-androideabi-gcc)"
-		_agcc-msg " gcc g++ c++ cpp clang clang++ ld ar as ranlib strip"
+		_agcc-msg " --force        Delete existing toolchain dir then create"
+		_agcc-msg " --cross        Show prefix of cross-compile commands instead of bin dir"
+		_agcc-msg " --hack         When -C, correctly handle ar, ld -lrt"
+		_agcc-msg " -c|-C command  Run command with cross-compile env. Should be placed at the end"
+		_agcc-msg "--------------------------------------------------------------------------------"
+		_agcc-msg "Toolchain commands: (most are link to file like arm-linux-androideabi-xxx)"
+		_agcc-msg " cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip"
 		_agcc-msg " readelf objdump nm c++filt strings elfedit objcopy"
 		_agcc-msg " addr2line size gcov gprof dwp"
-		_agcc-msg ""
-		_agcc-msg "There are other related commands, e.g."
-		_agcc-msg " cc(->gcc)"
 		_agcc-msg " gdb yasm llvm-as llvm-dis llvm-link FileCheck"
 		_agcc-msg " make awk python pydoc"
 		_agcc-msg " ndk-depends ndk-gdb ndk-which ndk-stack"
+		_agcc-msg "--------------------------------------------------------------------------------"
+		_agcc-msg "Without -c or -C options, output will be bin path(slash ended). e.g."
+		_agcc-msg "  \$NDK/std-toolchains/android-9-arm/bin/"
 		_agcc-msg ""
+		_agcc-msg "--cross means append arch prefix to all above bin path, e.g."
+		_agcc-msg "  \"...bin/\" changed to \"...bin/arm-linux-androideabi-\""
+		_agcc-msg "--------------------------------------------------------------------------------"
+		_agcc-msg "-c command...: Run command(bash if omitted) with \$CC etc. set:"
+		_agcc-msg " CC,CXX,LD,AR,AS,RANLIB,STRIP,NM,LINK"
+		_agcc-msg " e.g. CC=\"\$NDK/std-toolchains/android-9-arm/bin/gcc\""
+		_agcc-msg "--------------------------------------------------------------------------------"
+		_agcc-msg "The uppercase -C is same as -c except env name are suffixed with \"_target\""
+		_agcc-msg " e.g. CC_target=\"\$NDK/std-toolchains/android-9-arm/bin/gcc\""
+		_agcc-msg ""
+		_agcc-msg "--hack works for -C. Currently it solves following problems for Mac OS X:"
+		_agcc-msg "1. ar: Some project does not honor \$AR_target when make Android-side static"
+		_agcc-msg " lib(*.a). Instead, they call Mac-side ar command, so cause wrong result."
+		_agcc-msg " --hack prepend hack/...bin to \$PATH so ...bin/ar will be called instead."
+		_agcc-msg " It detect input *.o file format, Mac or Android, then call correct one."
+		_agcc-msg "2. librt: Some project use link option -lrt (librt) comes from linux, but"
+		_agcc-msg " Mac have no librt, so cause \"library not found for -lrt\"."
+ 		_agcc-msg " --hack append hack/...lib to \$LIBRARY_PATH, so the fake librt can be linked."
+		_agcc-msg " Te fake librt does not export any symbol, it is just a reference to the most"
+		_agcc-msg " commonly linked lib: /usr/lib/libSystem.B.dylib"
+		_agcc-msg "--------------------------------------------------------------------------------"
 		_agcc-msg "Examples:"
-		_agcc-msg " \`android-gcc-toolchain arm64\`gcc a.c"
-		_agcc-msg " cd ffmpeg; ./configure --enable-cross-compile --cross-prefix=\`android-gcc-toolchain arm64\` --arch=arm64 --target-os=linux"
-		_agcc-msg " cd nodejs; android-gcc-toolchain -c ./configure --dest-cpu=arm --dest-os=android --without-snapshot --without-inspector --without-intl"
+		_agcc-msg " \$ \`android-gcc-toolchain arm64\`gcc a.c"
+		_agcc-msg " \$ cd ~/Download/ffmpeg && ./configure --enable-cross-compile --cross-prefix=\`android-gcc-toolchain arm64\` --arch=arm64 --target-os=linux"
+		_agcc-msg " \$ cd ~/Download/node; GYP_DEFINES=host_os=mac android-gcc-toolchain arm64 --hack -C"
+		_agcc-msg " bash-3.2\$ ./configure --dest-cpu=arm64 --dest-os=android"
+		_agcc-msg " bash-3.2\$ make -j4"
 		return 1
 	fi
 
@@ -277,13 +284,17 @@ function android-gcc-toolchain {
 	local resultPath=$ANDROID_GCC_BIN/
 	for arg in "$@"; do 
 		if [[ $arg == "--cross" ]]; then
-			resultPath=$ANDROID_GCC_PREFIX;
-			break;
+			resultPath=$ANDROID_GCC_PREFIX
+			break
 		fi
 	done
-		
+
+	local needHack
 	while [[ $# -gt 0 ]]; do
-		if [[ $1 == "-c" ]]; then
+		if [[ $1 == "--hack" ]]; then
+			needHack=1
+
+		elif [[ $1 == "-c" ]]; then
 			shift
 			local cmd_and_args=(bash)
 			[[ $1 ]] && cmd_and_args=("$@")
@@ -306,19 +317,47 @@ function android-gcc-toolchain {
 			local cmd_and_args=(bash)
 			[[ $1 ]] && cmd_and_args=("$@")
 
-			CC_target=${resultPath}gcc \
-			CXX_target=${resultPath}g++ \
-			LD_target=${resultPath}ld \
-			AR_target=${resultPath}ar \
-			AS_target=${resultPath}as \
-			RANLIB_target=${resultPath}ranlib \
-			STRIP_target=${resultPath}strip \
-			NM_target=${resultPath}nm \
-			LINK_target=${resultPath}g++ \
-			"${cmd_and_args[@]}"
+			if [[ $needHack ]]; then
+				local thisDir=${BASH_SOURCE[0]%/*}
+				local thisOS=`uname -s` #Darwin or Linux
+				local hackDir=$thisDir/hack/$thisOS
+
+				[[ ! -d $hackDir ]] && needHack=""
+			fi
+
+			if [[ $needHack ]]; then
+				local _LIBRARY_PATH=$hackDir/lib
+				[[ $LIBRARY_PATH ]] && _LIBRARY_PATH=$LIBRARY_PATH:$_LIBRARY_PATH
+
+				CC_target=${resultPath}gcc \
+				CXX_target=${resultPath}g++ \
+				LD_target=${resultPath}ld \
+				AR_target=${resultPath}ar \
+				AS_target=${resultPath}as \
+				RANLIB_target=${resultPath}ranlib \
+				STRIP_target=${resultPath}strip \
+				NM_target=${resultPath}nm \
+				LINK_target=${resultPath}g++ \
+				_AR_host=`which ar` \
+				PATH=$hackDir/bin:$PATH \
+				LIBRARY_PATH=$_LIBRARY_PATH \
+				"${cmd_and_args[@]}"
+			else
+				CC_target=${resultPath}gcc \
+				CXX_target=${resultPath}g++ \
+				LD_target=${resultPath}ld \
+				AR_target=${resultPath}ar \
+				AS_target=${resultPath}as \
+				RANLIB_target=${resultPath}ranlib \
+				STRIP_target=${resultPath}strip \
+				NM_target=${resultPath}nm \
+				LINK_target=${resultPath}g++ \
+				"${cmd_and_args[@]}"
+			fi
 
 			return
 		fi
+
 		shift
 	done
 
@@ -391,14 +430,17 @@ if [[ $1 == --save || $1 == --restore ]]; then
 		local profile=$2
 		[[ ! $profile ]] && profile=~/.bash_profile
 
+		local profile2=`readlink $profile 2>/dev/null`
+		[[ $profile2 ]] && profile=$profile2
+
 		#get current script dir
 		local thisDir=${BASH_SOURCE[0]%/*}
 
-		#check whether bash_profile contains _ANDROID_GCC_BASHRC mark
-		if grep -q _ANDROID_GCC_BASHRC "$profile" 2>/dev/null; then
-			_agcc-msg "Removing lines contains \"_ANDROID_GCC_BASHRC\" from \"$profile\"."
-			grep -v _ANDROID_GCC_BASHRC "$profile" > "$profile".android-gcc || return 1
-			mv "$profile".android-gcc "$profile" || return 1
+		#check whether bash_profile contains ANDROID_GCC_BASHRC mark
+		if grep -q ANDROID_GCC_BASHRC "$profile" 2>/dev/null; then
+			_agcc-msg "Removing lines contains \"ANDROID_GCC_BASHRC\" from \"$profile\"."
+			grep -v ANDROID_GCC_BASHRC "$profile" > "$profile".android-gcc || return 1
+			cp "$profile".android-gcc "$profile" || return 1
 			_agcc-msg "Done"
 		else
 			_agcc-msg "\"$profile\" is already clean."
@@ -406,11 +448,11 @@ if [[ $1 == --save || $1 == --restore ]]; then
 
 		if [[ $1 == --save ]]; then
 			#add init script to bash_profile
-			echo "#                                                  mark for _ANDROID_GCC_BASHRC" >> "$profile"
-			echo "export _ANDROID_GCC_BASHRC_DIR=\"$thisDir\"" >> "$profile"
-			echo "source \"\$_ANDROID_GCC_BASHRC_DIR/bashrc\" && export PATH=\$PATH:\$_ANDROID_GCC_BASHRC_DIR" >> "$profile"
+			echo "#                                                  mark for ANDROID_GCC_BASHRC" >> "$profile"
+			echo "export ANDROID_GCC_BASHRC_DIR=\"$thisDir\"" >> "$profile"
+			echo "source \"\$ANDROID_GCC_BASHRC_DIR/bashrc\" && export PATH=\$PATH:\$ANDROID_GCC_BASHRC_DIR" >> "$profile"
 
-			_agcc-msg "\"$profile\" has bee appended 3 lines of script with mark of \"_ANDROID_GCC_BASHRC\"."
+			_agcc-msg "\"$profile\" has bee appended 3 lines of script with mark of \"ANDROID_GCC_BASHRC\"."
 		fi
 		return 0
 	}
