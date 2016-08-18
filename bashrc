@@ -15,22 +15,22 @@ function _agcc-msg {
 function _agcc-toolchain {
     [[ ! $NDK ]] && _agcc-msg "\$NDK is empty. Please run following command first: export NDK=__the_top_dir_of_installed_NDK__" && return 1
 
-    local ARCH APIL STL FORCE
+    local ARCH APIL STL FORCE ARCH_PREFIX STL_TAG
 
     _agcc-dbg "analysing args {"
     while [[ $# -gt 0 ]]; do
         _agcc-dbg "  \"$1\""
         case $1 in
-            --arch                          ) case $2 in [!-]*|"") ARCH=$2; _agcc-dbg "  =\"$2\""; shift;; esac;;
-            --api                           ) case $2 in [!-]*|"") APIL=$2; _agcc-dbg "  =\"$2\""; shift;; esac;;
-            --stl                           ) case $2 in [!-]*|"") STL=$2;  _agcc-dbg "  =\"$2\""; shift;; esac;;
-            --force                         ) FORCE=$1 ;;
+            --arch    ) case $2 in [!-]*|"") ARCH=$2; _agcc-dbg "  =\"$2\""; shift;; esac;;
+            --api     ) case $2 in [!-]*|"") APIL=$2; _agcc-dbg "  =\"$2\""; shift;; esac;;
+            --stl     ) case $2 in [!-]*|"") STL=$2;  _agcc-dbg "  =\"$2\""; shift;; esac;;
+            --force   ) FORCE=$1 ;;
             arm|arm64|x86|x86_64|mips|mips64) ARCH=$1 ;;
-            min|max|0                       ) APIL=$1 ;;
-            gnustl|libc++|stlport           ) STL=$1 ;;
-            -c|-C                           ) break ;; #stop parse due to the later args is command and its args
-            -*                              ) : ;; #skip unrelated option keyword
-            *                               ) [[ $1 -gt 0 ]] && APIL=$1 ;;
+            min|max|0 ) APIL=$1 ;;
+            gnustl|libc++|stlport ) STL=$1 ;;
+            -c|-C     ) break ;; #stop parse due to the later args is command and its args
+            -*        ) : ;; #skip unrelated option keyword
+            *         ) [[ $1 -gt 0 ]] && APIL=$1 ;;
         esac
         shift
     done
@@ -48,12 +48,12 @@ function _agcc-toolchain {
     ############################################################
     #get arch and cross-compile executable's name prefix
     case ${ARCH:=arm} in
-        arm)    local ARC_PREFIX=arm-linux-androideabi- ;;
-        arm64)  local ARC_PREFIX=aarch64-linux-android- ;;
-        x86)    local ARC_PREFIX=i686-linux-android- ;;
-        x86_64) local ARC_PREFIX=x86_64-linux-android- ;;
-        mips)   local ARC_PREFIX=mipsel-linux-android- ;;
-        mips64) local ARC_PREFIX=mips64el-linux-android- ;;
+        arm)    ARCH_PREFIX=arm-linux-androideabi- ;;
+        arm64)  ARCH_PREFIX=aarch64-linux-android- ;;
+        x86)    ARCH_PREFIX=i686-linux-android- ;;
+        x86_64) ARCH_PREFIX=x86_64-linux-android- ;;
+        mips)   ARCH_PREFIX=mipsel-linux-android- ;;
+        mips64) ARCH_PREFIX=mips64el-linux-android- ;;
         *) _agcc-msg "\"$ARCH\" is not a valid arch. It must be arm(default)|arm64|x86|x86_64|mips|mips64" && return 1 ;;
     esac
 
@@ -92,9 +92,9 @@ function _agcc-toolchain {
     ############################################################
     #get C++ STL
     case ${STL:=gnustl} in
-        gnustl ) local STL_TAG="" ;;
-        libc++ ) local STL_TAG=-stlcpp ;;
-        stlport) local STL_TAG=-stlport ;;
+        gnustl ) STL_TAG="" ;;
+        libc++ ) STL_TAG=-stlc++ ;;
+        stlport) STL_TAG=-stlport ;;
         *) _agcc-msg "\"$STL\" is not a valid C++ STL. It must be gnustl(default)|libc++|stlport" && return 1 ;;
     esac
 
@@ -108,7 +108,7 @@ function _agcc-toolchain {
         _agcc-msg "Make \$NDK/std-toolchains/$NAME because it does not exists..."
         "$NDK/build/tools/make_standalone_toolchain.py" --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE
 
-        if [[ -e "$BIN/$ARC_PREFIX"gcc ]]; then
+        if [[ -e "$BIN/$ARCH_PREFIX"gcc ]]; then
             _agcc-msg "Done"
             _agcc-msg ""
         else
@@ -117,15 +117,15 @@ function _agcc-toolchain {
             return 1
         fi
     else
-        ls "$BIN/$ARC_PREFIX"gcc > /dev/null || return 1
+        ls "$BIN/$ARCH_PREFIX"gcc > /dev/null || return 1
     fi
 
     ############################################################
     #make some symbol-link such as gcc @-> arm-linux-androideabi-gcc
     #also link cc @-> gcc
     pushd "$BIN" > /dev/null
-        for f in $ARC_PREFIX*; do s=${f/$ARC_PREFIX}; [[ ! -e $s && -x $f ]] && ln -s "$f" "$s"; done
-        [[ ! -e cc ]] && ln -s "$ARC_PREFIX"gcc cc
+        for f in $ARCH_PREFIX*; do s=${f/$ARCH_PREFIX}; [[ ! -e $s && -x $f ]] && ln -s "$f" "$s"; done
+        [[ ! -e cc ]] && ln -s "$ARCH_PREFIX"gcc cc
     popd > /dev/null
 
     ############################################################
@@ -133,7 +133,7 @@ function _agcc-toolchain {
     android-gcc-leave
 
     #save some var for further process
-    ANDROID_GCC_PREFIX=$BIN/$ARC_PREFIX
+    ANDROID_GCC_PREFIX=$BIN/$ARCH_PREFIX
     ANDROID_GCC_BIN=$BIN
     ANDROID_GCC_TAG=$NAME
     return 0
