@@ -201,7 +201,11 @@ function android-gcc-enter {
 
 function android-gcc-leave {
     #restore $PATH
-    [[ $ANDROID_GCC_BIN ]] && PATH=${PATH/$ANDROID_GCC_BIN:}
+    if [[ $ANDROID_GCC_BIN ]]; then
+        PATH=${PATH#$ANDROID_GCC_BIN:}        #remove bin: from head
+        PATH=${PATH//:$ANDROID_GCC_BIN:/:}    #replace :bin: with :
+        PATH=${PATH%:$ANDROID_GCC_BIN}        #remove :bin
+    fi
 
     #restore bash prompt $PS1
     [[ $ANDROID_GCC_TAG && $PS1 ]] && PS1=${PS1/\[$ANDROID_GCC_TAG\] }
