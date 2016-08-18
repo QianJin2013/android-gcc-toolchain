@@ -48,7 +48,7 @@ function _agcc-toolchain {
 	############################################################
 	#get arch and cross-compile executable's name prefix
 	case ${ARCH:=arm} in
-		arm)    local ARC_PREFIX=$ARCH-linux-androideabi- ;;
+		arm)    local ARC_PREFIX=arm-linux-androideabi- ;;
 		arm64)  local ARC_PREFIX=aarch64-linux-android- ;;
 		x86)    local ARC_PREFIX=i686-linux-android- ;;
 		x86_64) local ARC_PREFIX=x86_64-linux-android- ;;
@@ -265,7 +265,7 @@ function android-gcc-toolchain {
 		_agcc-msg " It detect input *.o file format, Mac or Android, then call correct one."
 		_agcc-msg "2. librt: Some project use link option -lrt (librt) comes from linux, but"
 		_agcc-msg " Mac have no librt, so cause \"library not found for -lrt\"."
- 		_agcc-msg " --hack append hack/...lib to \$LIBRARY_PATH, so the fake librt can be linked."
+		_agcc-msg " --hack append hack/...lib to \$LIBRARY_PATH, so the fake librt can be linked."
 		_agcc-msg " Te fake librt does not export any symbol, it is just a reference to the most"
 		_agcc-msg " commonly linked lib: /usr/lib/libSystem.B.dylib"
 		_agcc-msg "--------------------------------------------------------------------------------"
@@ -436,23 +436,41 @@ if [[ $1 == --save || $1 == --restore ]]; then
 		#get current script dir
 		local thisDir=${BASH_SOURCE[0]%/*}
 
+		local didBackup
+
 		#check whether bash_profile contains ANDROID_GCC_BASHRC mark
 		if grep -q ANDROID_GCC_BASHRC "$profile" 2>/dev/null; then
-			_agcc-msg "Removing lines contains \"ANDROID_GCC_BASHRC\" from \"$profile\"."
-			grep -v ANDROID_GCC_BASHRC "$profile" > "$profile".android-gcc || return 1
-			cp "$profile".android-gcc "$profile" || return 1
+			_agcc-msg "Backup \"$profile\" -> \"${profile}.bak\""
+			cp "$profile" "${profile}.bak" || return 1
+			didBackup=true
+
+			_agcc-msg "Remove lines contains \"ANDROID_GCC_BASHRC\" from \"$profile\"."
+			grep -v ANDROID_GCC_BASHRC "$profile" > "${profile}.tmp"
+			[[ $? > 1 ]] && return 1
+
+			mv "${profile}.tmp" "$profile" || return 1
 			_agcc-msg "Done"
 		else
-			_agcc-msg "\"$profile\" is already clean."
+			[[ -f $profile ]] && _agcc-msg "\"$profile\" is already clean."
 		fi
 
 		if [[ $1 == --save ]]; then
-			#add init script to bash_profile
-			echo "#                                                  mark for ANDROID_GCC_BASHRC" >> "$profile"
-			echo "export ANDROID_GCC_BASHRC_DIR=\"$thisDir\"" >> "$profile"
-			echo "source \"\$ANDROID_GCC_BASHRC_DIR/bashrc\" && export PATH=\$PATH:\$ANDROID_GCC_BASHRC_DIR" >> "$profile"
+			if [[ ! $didBackup && -f $profile ]]; then
+				_agcc-msg "Backup \"$profile\" -> \"${profile}.bak\""
+				cp "$profile" "${profile}.bak" || return 1
+			fi
 
-			_agcc-msg "\"$profile\" has bee appended 3 lines of script with mark of \"ANDROID_GCC_BASHRC\"."
+			_agcc-msg "Append init script(with mark \"ANDROID_GCC_BASHRC\") -> \"$profile\""
+			echo "#                                                  mark for ANDROID_GCC_BASHRC"            >> "$profile" || return 1
+			echo "export ANDROID_GCC_BASHRC_DIR=\"$thisDir\""                                                >> "$profile" || return 1
+			echo "source \"\$ANDROID_GCC_BASHRC_DIR/bashrc\" && export PATH=\$PATH:\$ANDROID_GCC_BASHRC_DIR" >> "$profile" || return 1
+
+			_agcc-msg "Done"
+
+			[[ ! -x $thisDir/android-gcc ]] && chmod a+x "$thisDir/android-gcc"
+			[[ ! -x $thisDir/android-gcc++ ]] && chmod a+x "$thisDir/android-gcc++"
+			[[ ! -x $thisDir/android-gcc-toolchain ]] && chmod a+x "$thisDir/android-gcc-toolchain"
+			[[ -d $thisDir/hack/Darwin/bin && ! -x $thisDir/hack/Darwin/bin/ar ]] && chmod a+x "$thisDir/hack/Darwin/bin/ar"
 		fi
 		return 0
 	}
