@@ -1,0 +1,53 @@
+#!/bin/bash
+EXE_NAME=gcc
+function _agcc-msg { echo "[$EXE_NAME-m32]" "$@" >&2; }
+function _agcc-dbg { [[ $AGCC_DBG ]] && _agcc-msg "$@"; }
+
+###############################################################################
+#Search exe in $PATH, but exclude myself.
+#This is faster than using `which -a $EXE_NAME` then filter
+
+EXE_PATH=""
+
+#split $PATH by :, save it to pathList as array
+IFS=: pathList=($PATH); unset IFS
+
+for d in "${pathList[@]}"; do
+    _agcc-dbg "check $EXE_NAME in $d"
+    #if exe in the dir and not same as me, then that is the real path i want
+    if [[ -f $d/$EXE_NAME && ! $d/$EXE_NAME -ef "$0" ]]; then
+        EXE_PATH=$d/$EXE_NAME
+        _agcc-dbg "found $EXE_NAME: \"$EXE_PATH\""
+        break
+    fi
+done
+
+if [[ ! $EXE_PATH ]]; then
+    _agcc-msg "$EXE_NAME not found."
+    exit 1
+fi
+
+###############################################################################
+#add some extra args
+
+EXTRA_ARGS=()
+
+has_m32=""
+for arg in "$@"; do
+    if [[ $arg == -m32 ]]; then
+        has_m32=1
+        _agcc-dbg "already specified -m32 option"
+        break
+    fi
+done
+
+if [[ ! $has_m32 ]]; then
+    EXTRA_ARGS[${#EXTRA_ARGS[@]}]="-m32"
+    _agcc-msg "insert -m32 option"
+fi
+
+###############################################################################
+#run with extra args
+
+_agcc-dbg "call \"$EXE_PATH\""
+exec "$EXE_PATH" "${EXTRA_ARGS[@]}" "$@"

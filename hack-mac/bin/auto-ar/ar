@@ -1,0 +1,72 @@
+#!/bin/bash
+EXE_NAME=ar
+function _agcc-msg { echo "[auto-ar]" "$@" >&2; }
+function _agcc-dbg { [[ $AGCC_DBG ]] && _agcc-msg "$@"; }
+
+###############################################################################
+#Search exe in $PATH, but exclude myself.
+#This is faster than using `which -a $EXE_NAME` then filter
+
+EXE_PATH=""
+
+#split $PATH by :, save it to pathList as array
+IFS=: pathList=($PATH); unset IFS
+
+for d in "${pathList[@]}"; do
+    _agcc-dbg "check $EXE_NAME in $d"
+    #if exe in the dir and not same as me, then that is the real path i want
+    if [[ -f $d/$EXE_NAME && ! $d/$EXE_NAME -ef "$0" ]]; then
+        EXE_PATH=$d/$EXE_NAME
+        _agcc-dbg "found $EXE_NAME: \"$EXE_PATH\""
+        break
+    fi
+done
+
+if [[ ! $EXE_PATH ]]; then
+    _agcc-msg "$EXE_NAME not found."
+    exit 1
+fi
+
+###############################################################################
+
+if [[ ! $AR_target ]]; then
+    _agcc-msg "AR_target not defined."
+    exit 1
+fi
+
+#replace last "ar" with "objdump"
+objdump=${AR_target%ar}objdump
+if [[ ! -f $objdump ]]; then
+    _agcc-msg "\"$objdump\" not found."
+    exit 1
+fi
+if [[ ! -x $objdump ]]; then
+    _agcc-msg "\"$objdump\" not executable."
+    exit 1
+fi
+
+###############################################################################
+
+OBJ_FILE=""
+for f in "$@"; do
+    #find a non-zero *.o file
+    if [[ ${f/*.} == o && -s $f ]]; then
+        OBJ_FILE=$f
+        break
+    fi
+done
+
+if [[ $OBJ_FILE ]]; then
+    #check .o file archive header by target objdump, if OK, then run target ar
+    if "$objdump" -a "$OBJ_FILE" > /dev/null 2>/dev/null; then
+        _agcc-msg "call \"$AR_target\""
+        exec "$AR_target" "$@"
+        exit
+    fi
+else
+    _agcc-msg "no any non-empty *.o file provided for type check."
+fi
+
+#otherwise call host ar
+_agcc-msg "call \"$EXE_PATH\""
+exec "$EXE_PATH" "$@"
