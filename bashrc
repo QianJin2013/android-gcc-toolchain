@@ -1,3 +1,6 @@
+#get current script dir
+ANDROID_GCC_BASHRC_DIR=${BASH_SOURCE[0]%/*}
+
 if [[ $ANDROID_GCC_DBG ]]; then
     function _agcc-dbg {
         echo "$@" >&2
@@ -28,8 +31,8 @@ function _agcc-toolchain {
             arm|arm64|x86|x86_64|mips|mips64) ARCH=$1 ;;
             min|max|0 ) APIL=$1 ;;
             gnustl|libc++|stlport ) STL=$1 ;;
-            -c|-C     ) break ;; #stop parse due to the later args is command and its args
-            -*        ) : ;; #skip unrelated option keyword
+            -c|-C     ) _agcc-dbg "  break"; break;; #stop parse due to the later args is command and its args
+            -*        ) _agcc-dbg "  skip \"$1\""; case $2 in [!-]*|"") _agcc-dbg "  skip \"$2\""; shift;; esac;;
             *         ) [[ $1 -gt 0 ]] && APIL=$1 ;;
         esac
         shift
@@ -171,17 +174,6 @@ function android-gcc-enter {
     PATH=$ANDROID_GCC_BIN:$PATH
     PS1="[$ANDROID_GCC_TAG] $PS1"
 
-    #clear CC etc.
-    [[ $CC ]] && OLD_CC=$CC && CC=
-    [[ $CXX ]] && OLD_CC=$CXX && CXX=
-    [[ $LD ]] && OLD_LD=$LD && LD=
-    [[ $AR ]] && OLD_AR=$AR && AR=
-    [[ $AS ]] && OLD_AS=$AS && AS=
-    [[ $RANLIB ]] && OLD_RANLIB=$RANLIB && RANLIB=
-    [[ $STRIP ]] && OLD_STRIP=$STRIP && STRIP=
-    [[ $NM ]] && OLD_NM=$NM && NM=
-    [[ $LINK ]] && OLD_LINK=$LINK && LINK=
-
     ############################################################
     echo "# NDK standalone toolchain for $ANDROID_GCC_TAG"
     echo "# "
@@ -211,24 +203,36 @@ function android-gcc-leave {
     [[ $ANDROID_GCC_TAG && $PS1 ]] && PS1=${PS1/\[$ANDROID_GCC_TAG\] }
 
     unset ANDROID_GCC_PREFIX ANDROID_GCC_TAG ANDROID_GCC_BIN
+}
 
-    #restore CC etc.
-    [[ $OLD_CC ]] && CC=$OLD_CC && unset OLD_CC
-    [[ $OLD_CXX ]] && CC=$OLD_CXX && unset OLD_CXX
-    [[ $OLD_LD ]] && LD=$OLD_LD && unset OLD_LD
-    [[ $OLD_AR ]] && AR=$OLD_AR && unset OLD_AR
-    [[ $OLD_AS ]] && AS=$OLD_AS && unset OLD_AS
-    [[ $OLD_RANLIB ]] && RANLIB=$OLD_RANLIB && unset OLD_RANLIB
-    [[ $OLD_STRIP ]] && STRIP=$OLD_STRIP && unset OLD_STRIP
-    [[ $OLD_NM ]] && NM=$OLD_NM && unset OLD_NM
-    [[ $OLD_LINK ]] && LINK=$OLD_LINK && unset OLD_LINK
+function _agcc-run-cmd-maybe-hack {
+
+    if [[ $HACK_OPT ]]; then
+        local hackDir=$ANDROID_GCC_BASHRC_DIR/hack/`uname -s`
+        if [[ -d $hackDir ]]; then
+
+            #call original cmmand with more env
+            _AR_host=`which ar` \
+            _CC_host=`which gcc` \
+            _CXX_host=`which g++` \
+            LIBRARY_PATH=$LIBRARY_PATH:$hackDir/lib \
+            PATH=$hackDir/bin:$PATH \
+            GYP_DEFINES="host_os=`uname -s | sed -e 's/Linux/linux/;s/Darwin/mac/'`" \
+            "$@"
+
+            return
+        fi
+    fi
+
+    #otherwise call original command without more env
+    "$@"
 }
 
 function android-gcc-toolchain {
     if [[ $1 == --help ]]; then
         _agcc-msg "Switch toolchain(create if) & show path of toolchain bin dir."
         _agcc-msg "Options: [[--arch] ARCH］[[--api] APIL] [[--stl] STL] [--force]"
-        _agcc-msg "         [--cross] [--hack]"
+        _agcc-msg "         [--cross] [--hack [HACK]]"
         _agcc-msg "         [-c|-C [command [arguments] ]"
         _agcc-msg " --arch ARCH    Android architecture"
         _agcc-msg "   ARCH         {arm(default)|arm64|x86|x86_64|mips|mips64}"
@@ -238,7 +242,9 @@ function android-gcc-toolchain {
         _agcc-msg "   STL          {gnustl(default)|libc++|stlport}"
         _agcc-msg " --force        Delete existing toolchain dir then create"
         _agcc-msg " --cross        Show prefix of cross-compile commands instead of bin dir"
-        _agcc-msg " --hack         When -C, correctly handle ar, ld -lrt"
+        _agcc-msg " --hack HACK    When -C, correctly handle ar, ld -lrt etc."
+        _agcc-msg "   HACK         Must be comma separated string, combination of:"
+        _agcc-msg "                m32,no-m32"
         _agcc-msg " -c|-C command  Run command with cross-compile env. Should be placed at the end"
         _agcc-msg "--------------------------------------------------------------------------------"
         _agcc-msg "Toolchain commands: (most are link to file like arm-linux-androideabi-xxx)"
@@ -270,13 +276,20 @@ function android-gcc-toolchain {
         _agcc-msg "2. librt: Some project use link option -lrt (librt) comes from linux, but"
         _agcc-msg " Mac have no librt, so cause \"library not found for -lrt\"."
         _agcc-msg " --hack append hack/...lib to \$LIBRARY_PATH, so the fake librt can be linked."
-        _agcc-msg " Te fake librt does not export any symbol, it is just a reference to the most"
+        _agcc-msg " The fake librt does not export any symbol, it is just a reference to the most"
         _agcc-msg " commonly linked lib: /usr/lib/libSystem.B.dylib"
+        _agcc-msg "3. \"host_os\": Some wrong gyp treat host_os as android so compile wrong files"
+        _agcc-msg " --hack will set env GYP_DEFINES=\"host_os=mac\" for gyp."
+        _agcc-msg "4. (Optional) On 64bit OS, some projects added -m32 option to gcc/g++ to produce"
+        _agcc-msg " 32bit codes but some not added, cause link error of mixing 64 and 32bit codes."
+        _agcc-msg " --hack m32 forcibly add -m32 option by hook gcc/g++ via \$PATH."
+        _agcc-msg "5. (Optional) Same problem as 4."
+        _agcc-msg " --hack no-m32 forcibly remove -m32 option(cause 64bit codes)."
         _agcc-msg "--------------------------------------------------------------------------------"
         _agcc-msg "Examples:"
         _agcc-msg " \$ \`android-gcc-toolchain arm64\`gcc a.c"
         _agcc-msg " \$ cd ~/Download/ffmpeg && ./configure --enable-cross-compile --cross-prefix=\`android-gcc-toolchain arm64\` --arch=arm64 --target-os=linux"
-        _agcc-msg " \$ cd ~/Download/node; GYP_DEFINES=host_os=mac android-gcc-toolchain arm64 --hack -C"
+        _agcc-msg " \$ cd ~/Download/node; android-gcc-toolchain arm64 --hack -C"
         _agcc-msg " bash-3.2\$ ./configure --dest-cpu=arm64 --dest-os=android"
         _agcc-msg " bash-3.2\$ make -j4"
         return 1
@@ -293,16 +306,18 @@ function android-gcc-toolchain {
         fi
     done
 
-    local needHack
+    local HACK_OPT
     while [[ $# -gt 0 ]]; do
         if [[ $1 == "--hack" ]]; then
-            needHack=1
+            case $2 in [!-]*|"") HACK_OPT=$2; shift;; esac
+            [[ ! $HACK_OPT ]] && HACK_OPT=default
 
         elif [[ $1 == "-c" ]]; then
             shift
             local cmd_and_args=(bash)
-            [[ $1 ]] && cmd_and_args=("$@")
+            [[ $# -gt 0 ]] && cmd_and_args=("$@")
 
+            #run command with env
             CC=${resultPath}gcc \
             CXX=${resultPath}g++ \
             LD=${resultPath}ld \
@@ -319,45 +334,20 @@ function android-gcc-toolchain {
         elif [[ $1 == "-C" ]]; then
             shift
             local cmd_and_args=(bash)
-            [[ $1 ]] && cmd_and_args=("$@")
+            [[ $# -gt 0 ]] && cmd_and_args=("$@")
 
-            if [[ $needHack ]]; then
-                local thisDir=${BASH_SOURCE[0]%/*}
-                local thisOS=`uname -s` #Darwin or Linux
-                local hackDir=$thisDir/hack/$thisOS
-
-                [[ ! -d $hackDir ]] && needHack=""
-            fi
-
-            if [[ $needHack ]]; then
-                local _LIBRARY_PATH=$hackDir/lib
-                [[ $LIBRARY_PATH ]] && _LIBRARY_PATH=$LIBRARY_PATH:$_LIBRARY_PATH
-
-                CC_target=${resultPath}gcc \
-                CXX_target=${resultPath}g++ \
-                LD_target=${resultPath}ld \
-                AR_target=${resultPath}ar \
-                AS_target=${resultPath}as \
-                RANLIB_target=${resultPath}ranlib \
-                STRIP_target=${resultPath}strip \
-                NM_target=${resultPath}nm \
-                LINK_target=${resultPath}g++ \
-                _AR_host=`which ar` \
-                PATH=$hackDir/bin:$PATH \
-                LIBRARY_PATH=$_LIBRARY_PATH \
-                "${cmd_and_args[@]}"
-            else
-                CC_target=${resultPath}gcc \
-                CXX_target=${resultPath}g++ \
-                LD_target=${resultPath}ld \
-                AR_target=${resultPath}ar \
-                AS_target=${resultPath}as \
-                RANLIB_target=${resultPath}ranlib \
-                STRIP_target=${resultPath}strip \
-                NM_target=${resultPath}nm \
-                LINK_target=${resultPath}g++ \
-                "${cmd_and_args[@]}"
-            fi
+            #run command with env
+            CC_target=${resultPath}gcc \
+            CXX_target=${resultPath}g++ \
+            LD_target=${resultPath}ld \
+            AR_target=${resultPath}ar \
+            AS_target=${resultPath}as \
+            RANLIB_target=${resultPath}ranlib \
+            STRIP_target=${resultPath}strip \
+            NM_target=${resultPath}nm \
+            LINK_target=${resultPath}g++ \
+            HACK_OPT=$HACK_OPT \
+            _agcc-run-cmd-maybe-hack "${cmd_and_args[@]}"
 
             return
         fi
@@ -365,6 +355,7 @@ function android-gcc-toolchain {
         shift
     done
 
+    #if not specified -c or -C, then just print bin path (or further with name prefix)
     echo "$resultPath"
     return 0
 }
@@ -437,9 +428,6 @@ if [[ $1 == --save || $1 == --restore ]]; then
         local profile2=`readlink $profile 2>/dev/null`
         [[ $profile2 ]] && profile=$profile2
 
-        #get current script dir
-        local thisDir=${BASH_SOURCE[0]%/*}
-
         local didBackup
 
         #check whether bash_profile contains ANDROID_GCC_BASHRC mark
@@ -465,16 +453,14 @@ if [[ $1 == --save || $1 == --restore ]]; then
             fi
 
             _agcc-msg "Append init script(with mark \"ANDROID_GCC_BASHRC\") -> \"$profile\""
-            echo "#                                                  mark for ANDROID_GCC_BASHRC"            >> "$profile" || return 1
-            echo "export ANDROID_GCC_BASHRC_DIR=\"$thisDir\""                                                >> "$profile" || return 1
+            echo "#                                                    mark for ANDROID_GCC_BASHRC"          >> "$profile" || return 1
+            echo "ANDROID_GCC_BASHRC_DIR=\"$ANDROID_GCC_BASHRC_DIR\""                                        >> "$profile" || return 1
             echo "source \"\$ANDROID_GCC_BASHRC_DIR/bashrc\" && export PATH=\$PATH:\$ANDROID_GCC_BASHRC_DIR" >> "$profile" || return 1
 
             _agcc-msg "Done"
 
-            [[ ! -x $thisDir/android-gcc ]] && chmod a+x "$thisDir/android-gcc"
-            [[ ! -x $thisDir/android-gcc++ ]] && chmod a+x "$thisDir/android-gcc++"
-            [[ ! -x $thisDir/android-gcc-toolchain ]] && chmod a+x "$thisDir/android-gcc-toolchain"
-            [[ -d $thisDir/hack/Darwin/bin && ! -x $thisDir/hack/Darwin/bin/ar ]] && chmod a+x "$thisDir/hack/Darwin/bin/ar"
+            for f in "$ANDROID_GCC_BASHRC_DIR"/android-gcc*; do [[ ! -x $f ]]  && chmod a+x "$f"; done
+            for f in "$ANDROID_GCC_BASHRC_DIR"/hack/*/bin/*; do [[ ! -x $f ]]  && chmod a+x "$f"; done
         fi
         return 0
     }

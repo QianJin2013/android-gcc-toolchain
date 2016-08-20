@@ -1,2 +1,4 @@
 #!/bin/bash
-source "${BASH_SOURCE[0]%/*}/bashrc" && android-gcc-toolchain "$@"
+thePath=`readlink ${BASH_SOURCE[0]}`
+[[ ! $thePath ]] && thePath=${BASH_SOURCE[0]}
+source "${thePath%/*}/bashrc" && android-gcc-toolchain "$@"

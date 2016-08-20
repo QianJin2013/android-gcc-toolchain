@@ -1,0 +1,52 @@
+#!/bin/bash
+function msg {
+    echo "$@" 1>&2
+}
+
+if [[ ! -x $_CXX_host ]]; then
+    msg "[hacked-mac-g++] _CXX_host not defined or not executable."
+    exit 1
+fi
+
+isAdd_m32=""
+isRemove_m32=""
+
+case $HACK_OPT in
+    no-m32|no-m32,*|*,no-m32,*|*,no-m32) isRemove_m32=1 ;;
+    m32|m32,*|*,m32,*|*,m32)          isAdd_m32=1 ;;
+esac
+
+has_m32=
+for arg in "$@"; do
+    if [[ $arg == -m32 ]]; then
+        has_m32=1
+    fi
+done
+
+if [[ $isAdd_m32 ]]; then
+
+    if [[ $has_m32 ]]; then
+        #msg "[hacked-mac-g++] call mac-g++ (already with -m32)"
+        exec "$_CXX_host" "$@"
+    else
+        msg "[hacked-mac-g++] call mac-g++ with -m32 forcibly"
+        exec "$_CXX_host" -m32 "$@"
+    fi
+
+elif [[ $isRemove_m32 ]]; then
+
+    if [[ $has_m32 ]]; then
+        args=()
+        for arg in "$@"; do
+            [[ $arg != -m32 ]] && args[${#args[@]}]=$arg
+        done
+        msg "[hacked-mac-g++] call mac-g++ without -m32 forcibly"
+        exec "$_CXX_host" "${args[@]}"
+    else
+        #msg "[hacked-mac-g++] call mac-g++ (already without -m32)"
+        exec "$_CXX_host" "$@"
+    fi
+else
+    #msg "[hacked-mac-g++] call mac-g++ (not change anything)"
+    exec "$_CXX_host" "$@"
+fi
