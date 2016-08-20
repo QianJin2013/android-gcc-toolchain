@@ -203,6 +203,7 @@ source ~/Downloads/android-gcc-toolchain/bashrc --restore
 - If you upgrade your NDK, you need specify `--force` option to 
 `android-gcc-toolchain` or `android-gcc-enter` to recreate toolchains. 
 
+----
 
 ### About hack mode: `android-gcc-toolchain --hack -C`
 
