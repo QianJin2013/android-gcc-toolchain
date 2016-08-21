@@ -132,13 +132,10 @@ function _agcc-toolchain {
     popd > /dev/null
 
     ############################################################
-    #restore $PATH and bash prompt changed by android-gcc-enter
-    android-gcc-leave
-
     #save some var for further process
-    ANDROID_GCC_PREFIX=$BIN/$ARCH_PREFIX
-    ANDROID_GCC_BIN=$BIN
-    ANDROID_GCC_TAG=$NAME
+    TMP_ANDROID_GCC_BIN=$BIN
+    TMP_ANDROID_GCC_PREFIX=$BIN/$ARCH_PREFIX
+    TMP_ANDROID_GCC_TAG=$NAME
     return 0
 }
 
@@ -167,6 +164,15 @@ function android-gcc-enter {
 
     #create standalone toolchain(once)
     _agcc-toolchain "$@" || return 1
+
+    #restore $PATH and bash prompt changed by android-gcc-enter
+    android-gcc-leave
+
+    #save result of _agcc-toolchain
+    ANDROID_GCC_BIN=$TMP_ANDROID_GCC_BIN
+    ANDROID_GCC_PREFIX=$TMP_ANDROID_GCC_PREFIX
+    ANDROID_GCC_TAG=$TMP_ANDROID_GCC_TAG
+    unset TMP_ANDROID_GCC_BIN TMP_ANDROID_GCC_PREFIX TMP_ANDROID_GCC_TAG
 
     ############################################################
     #modify $PATH to redirect gcc ... to toolchain/bin/gcc ...
@@ -202,7 +208,7 @@ function android-gcc-leave {
     #restore bash prompt $PS1
     [[ $ANDROID_GCC_TAG && $PS1 ]] && PS1=${PS1/\[$ANDROID_GCC_TAG\] }
 
-    unset ANDROID_GCC_PREFIX ANDROID_GCC_TAG ANDROID_GCC_BIN
+    unset ANDROID_GCC_BIN ANDROID_GCC_PREFIX ANDROID_GCC_TAG
 }
 
 function _agcc-run-cmd-maybe-hack {
@@ -287,24 +293,25 @@ function android-gcc-toolchain {
         _agcc-msg " --hack no-m32 forcibly remove -m32 option(cause 64bit codes)."
         _agcc-msg "--------------------------------------------------------------------------------"
         _agcc-msg "Examples:"
-        _agcc-msg " \$ \`android-gcc-toolchain arm64\`gcc a.c"
-        _agcc-msg " \$ cd ~/Download/ffmpeg && ./configure --enable-cross-compile --cross-prefix=\`android-gcc-toolchain arm64\` --arch=arm64 --target-os=linux"
-        _agcc-msg " \$ cd ~/Download/node; android-gcc-toolchain arm64 --hack -C"
-        _agcc-msg " bash-3.2\$ ./configure --dest-cpu=arm64 --dest-os=android"
-        _agcc-msg " bash-3.2\$ make -j4"
+        _agcc-msg "\$ \`android-gcc-toolchain arm64\`gcc a.c"
+        _agcc-msg "\$ cd ~/Download/ffmpeg && ./configure --enable-cross-compile --cross-prefix=\`android-gcc-toolchain arm64\` --arch=arm64 --target-os=linux"
+        _agcc-msg "\$ cd ~/Download/node && android-gcc-toolchain arm64 --hack -C"
+        _agcc-msg "bash-3.2\$ ./configure --dest-cpu=arm64 --dest-os=android && make -j4"
         return 1
     fi
 
     #create standalone toolchain(once)
     _agcc-toolchain "$@" || { echo "/android-gcc-toolchain-failed/"; return 1; }
 
-    local resultPath=$ANDROID_GCC_BIN/
+    local resultPath=$TMP_ANDROID_GCC_BIN/
     for arg in "$@"; do 
         if [[ $arg == "--cross" ]]; then
-            resultPath=$ANDROID_GCC_PREFIX
+            resultPath=$TMP_ANDROID_GCC_PREFIX
             break
         fi
     done
+
+    unset TMP_ANDROID_GCC_BIN TMP_ANDROID_GCC_PREFIX TMP_ANDROID_GCC_TAG
 
     local HACK_OPT
     while [[ $# -gt 0 ]]; do
