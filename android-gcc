@@ -1,4 +1,0 @@
-#!/bin/bash
-thePath=`readlink ${BASH_SOURCE[0]}`
-[[ ! $thePath ]] && thePath=${BASH_SOURCE[0]}
-source "${thePath%/*}/bashrc" && android-gcc "$@"

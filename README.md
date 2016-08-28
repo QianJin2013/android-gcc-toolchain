@@ -4,297 +4,300 @@ A single command to enter android cross compile environment without manually cre
 Tested on Mac OS X 10.11.5/10.11.6 EI Capitan, NDK 12.1.29.  
 Should also works on Linux (not tested yet).
 
-**As a sample, the last section show how to build NodeJS for Android arm64/arm perfectly**
+As an example, [Build NodeJS for Android perfectly on Mac](#build-nodejs-for-android-perfectly-on-mac).
 
-![android-gcc](doc/android-gcc.png)
-![android-gcc-toolchain](doc/android-gcc-toolchain.png)
-![android-gcc-enter](doc/android-gcc-enter.png)
+### Prerequisite
 
+Install Android NDK and set env var `NDK` to the dir. `export NDK=__the_top_dir_of_installed_NDK__`
 
-###Features/Ideas
+### Install
+
+Nothing. Just use the `android-gcc-toolchain` with full path, 
+otherwise link it to /usr/local/bin/ or add the path to the $PATH. 
+
+### Screenshot
+
+- Run android gcc related commands easily:<a name="screenshot-android-gcc"></a>
+![android-gcc](img/android-gcc.png)
+
+- Enter a dedicated shell where can run android gcc related commands easily:<a name="screenshot-dedicated-shell"></a>
+![android-gcc-enter](img/android-gcc-enter.png)
+
+- Cross-compile AUTOCONF and GYP project easily:<a name="screenshot-cross-compile-autoconf-and-gyp"></a>
+![android-gcc-toolchain](img/android-gcc-toolchain.png)
+
+### Usage
+
+Use or create toolchain, set env and run command, or print path of the bin dir.
+
+*Note: words in `[  ]` means may be omitted.*
+<a name="options"></a>
+```
+android-gcc-toolchain [OPTIONS] [CMD [ARGS...]]
+--------------------------------------------------------------------------------
+OPTIONS: Toolchain options, Command Mode, Misc options
+
+Toolchain options: specify which toolchain to use or create
+ [--arch] ARCH  Android architecture:
+                {arm(default)|arm64|x86|x86_64|mips|mips64} or aliases:
+                i386,ia32(=x86), x64(=x86_64), mipsel, mipsel64
+ [--api]  APIL  Android API Level:
+                {min(default)|max|an integer} or aliases:
+                0(=min), 99(=max)
+ [--stl]  STL   C++ STL to use:
+                {gnustl(default)|libc++|stlport}
+ --force        Delete existing toolchain dir then create
+
+Command Mode: Specify whether set $PATH or $CC... or $CC_target...
+ omitted        This is the substitute mode.
+                Set $PATH to redirect gcc... to the toolchain's gcc...
+                e.g. export PATH=".../std-toolchains/.../bin:$PATH"
+ -c             Set $CC,$CXX,$LD,$AR,$AS,$RANLIB,$STRIP,$NM,$LINK
+                e.g. export CC=".../std-toolchains/.../bin/gcc"
+ -C             Set $CC_target,$CXX_target,$AR_target... ...$LINK_target
+                e.g. export CC_target=".../std-toolchains/.../bin/gcc"
+Misc options:
+ --hack  [HACK] Only used for -C. To correctly handle ar, ld -lrt etc.
+                {m32} (Currently only have m32 option)
+ -              Means the end of options and next arg is CMD. But if nothing 
+                followed, then just print output the bin dir(slash ended).
+ --             Same as -
+--------------------------------------------------------------------------------
+CMD and ARGS: The external command to be run
+
+ CMD            Any command. Default is bash.
+                The first non-option arg will be treated as CMD.
+                To avoid ambiguous with other option, place - or -- before CMD
+ ARGS...        The arguments for the CMD
+```
+
+The syntax is very natural, option keyword itself(`--arch` etc.) can be omitted, order does not care. e.g.
+
+The following commands are same:
+```
+android-gcc-toolchain --arch arm64 --api 24
+android-gcc-toolchain arm64 24
+```
+
+When want run commands(such as gcc), just prepend above command to your command. e.g. 
+`CMD ARGS...` -> `android-gcc-toolchain arm64` `CMD ARGS...`, it works as it implies.
+
+### Features/Ideas
 
 1. **Run android gcc related commands easily.**
 
-    ```
-    $ android-gcc  a.c
-    $ android-gcc++  a.cc
-    $ ARCH=arm64 android-gcc  a.c
-    ```    
-    Alternatively, you can use:
-    ```
-    $ `android-gcc-toolchain`gcc  a.c
-    $ `android-gcc-toolchain arm64`gdb
-    ```
-    Obviously, options are same as original gcc,g++, yet with the ability to specify toolchain's arch, api level etc.
+    Just prepend `android-gcc-toolchain` to your gcc related command.
     
-2. **Cross-compile gyp/autoconf project easily.**
-
-    - **For autoconf build, e.g. ffmpeg.**
-        
-        Just embed `android-gcc-toolchain arm64` to cross-prefix.
-        ```
-        $ ./configure --enable-cross-compile --cross-prefix=`android-gcc-toolchain arm64` --target-os=linux --arch=arm64 ...
-        $ make -j4
-        ```
-
-    - **For gyp build, e.g. NodeJS.**
-
-        There are several cases.
-        
-        - Redirect all compiler related commands to the toolchain then build.
-
-            ```
-            $ android-gcc-enter arm64
-            ...
-            [android-21-arm64] $ ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
-            [android-21-arm64] $ make -j4
-            ```
-            This is the most concrete way to build target(Android)-side only project.
-            Any attempt to produce host-side output will cause error.
-            
-        - Enter a `$CC`... predefined environment to build.
-        
-            ```
-            $ android-gcc-toolchain arm64 -c
-            bash-3.2$ ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
-            bash-3.2$ make -j4
-            ```
-            This is a graceful way to build target(Android)-side only project.
-            Attempt to produce host-side output maybe OK, depends on build system.
-            
-        - Enter a `$CC_target`... predefined environment to build.
-        
-            ```
-            $ android-gcc-toolchain arm64 -C      ###upper case -C
-            bash-3.2$ ./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl 
-            bash-3.2$ make -j4
-            ```
-            This is the most graceful way to build a hybrid project(Both target and host side output).
-            Target command honor the `$CC_target`..., host command honor its own (e.g. /usr/bin/cc, or $CC_host or $CC)
-            
-            The most complicated case is: some build system wrongly call host-side command for target build, 
-            or attempt to link target related lib for host build.
-            Please read the last section **"About hack mode"**.
-        
-        ....................................................................
-            
-        Wrap up: without interactively enter command in the new bash, you can wrap each command with this tool.
-         
-            $ android-gcc-toolchain arm64 -c ./configure ... 
-            $ android-gcc-toolchain arm64 -c make ...
-    
-3. **Enter a dedicated environment where can run android gcc related commands directly.**
-
-    - **`android-gcc-enter` to run cc c++ gdb readelf make python etc. without path.**
-
-        ```
-        $ android-gcc-enter arm64
-        ...
-        [android-21-arm64] $ which gcc
-        /Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-21-arm64/bin/gcc
-        [android-21-arm64] $ gcc  a.c
-        [android-21-arm64] $ android-gcc-leave
-        $ 
-        ```
-        You can do safest cross-compile as shown in section 2, and even compile some non-cross-compilable project.
-
-    - **`android-gcc-toolchain -c` to start a separate bash so can run `$CC` etc.**
-    
-        It just set `$CC`,$CXX,$LINK,$LD,... for the new bash instead of changing $PATH
-        ```
-        $ android-gcc-toolchain arm64 -c
-        bash-3.2$ echo $CC
-        /Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-21-arm64/bin/gcc
-        bash-3.2$ $CC  a.c
-        bash-3.2$ exit
-        ```
-        You can do cross-compile as shown in section 2.
-
-        Similarly, there are an upper case `-C` option provide `$CC_target`....
-        ```
-        $ android-gcc-toolchain arm64 -C
-        bash-3.2$ echo $CC_target 
-        /Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-21-arm64/bin/gcc
-        bash-3.2$ exit
-        ```
-        This is for some complicated build system which build both host and target output.
-        Please read the last section **"About hack mode"**.
-
-4. **Automatically create standalone toolchain the first time.**
-
-    With same command-line options of 
-    $NDK/build/tools/make_standalone_toolchain.py (except for --install-dir options of course).    
-
     ```
-    $ android-gcc-toolchain --help
-    ...
-    $ android-gcc-enter --help
-    Options: [[--arch] ARCH］[[--api] APIL] [[--stl] STL] [--force]
-     --arch ARCH    Android architecture
-       ARCH         {arm(default)|arm64|x86|x86_64|mips|mips64}
-     --api APIL     Android API Level
-       APIL         {min(default)|max|an integer}
-     --stl STL      C++ STL to use
-       STL          {gnustl(default)|libc++|stlport}
-     --force        delete existing toolchain dir then create
-     ...
+    android-gcc-toolchain gcc a.c
+    android-gcc-toolchain arm64 gcc a.c
     ```
-    Option keyword itself(`--arch`,`--api`,`--stl`) can be omitted. Order does not care.
     
-    The `android-gcc` and `android-gcc++` is controlled by `$ARCH`, `$APIL`, `$STL`, 
-    the toolchain will also be created if not exists. 
+    See [screehshot](#screenshot-android-gcc)
     
-5. **Automatically get minimum/maximum `Android API level` from NDK.**
+2. **Start a dedicated shell where can run android gcc related commands easily.**<a name="dedicated-shell"></a>
 
-    ```
-    $ android-gcc-toolchain --api max
-    $ android-gcc-toolchain 23
-    $ android-gcc-enter arm64 23
-    ```
-    By default, get minimum API level from NDK for specified arch.
+    - start an interactive shell with gcc... ready
+    
+        ```
+        android-gcc-toolchain arm64                               #bash
+        android-gcc-toolchain arm64 zsh                           #zsh
+        ```
+        
+        See also: [redirected commands list](#about-substitute-mode).
+        
+    - start an interactive bash with $CC... predefined
+    
+        ```
+        android-gcc-toolchain arm64 -c
+        ```
 
+        See also: [env vars passed to CMD](#about-env-vars-passed-to-cmd) 
+    
+    - start an interactive bash with $CC_target... predefined
+        
+        ```
+        android-gcc-toolchain arm64 -C
+        ```
+
+        See also: [env vars passed to CMD](#about-env-vars-passed-to-cmd).
+
+    Screen shot are [here](#screenshot-dedicated-shell). 
+
+    To feed multiple commands to the shell non-interactively, 
+    you can use `<<EOF`[Here Document](http://tldp.org/LDP/abs/html/here-docs.html) or 
+    `<<<"..."`[Here String(bash only)](http://tldp.org/LDP/abs/html/x17837.html)
+    or `bash -c` to feed commands to the shell, or you call this tool multiple times.
+    With options `arm64 -c` as example:
+    
+    ```
+    $ android-gcc-toolchain arm64 -c <<EOF
+    CMD1 ARGS... && CMD2 ARGS...
+    EOF
+    $ android-gcc-toolchain arm64 -c <<< "CMD1 ARGS... && CMD2 ARGS..." 
+    $ android-gcc-toolchain arm64 -c bash -c <<< "CMD1 ARGS... && CMD2 ARGS..." 
+    $ android-gcc-toolchain arm64 -c CMD1 ARGS && android-gcc-toolchain arm64 -c CMD2 ARGS..." 
+    ```
+    
+    *bash-only: you can use \EOF to disable pathname and var expansion*
+
+3. **Cross-compile an AUTOCONF project(e.g. ffmpeg) easily.**
+
+    Just use `android-gcc-toolchain arm64 -` as prefix of gcc....
+    You can treat `-` as a special command which just print toolchain bin dir(slash ended). e.g.
+    the result is `/Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-21-arm64/bin/`
+    
+    ```
+    ./configure --enable-cross-compile --cross-prefix=`android-gcc-toolchain arm64 -` --target-os=linux --arch=arm64 && make
+    ```
+
+4. **Cross-compile an GYP project(e.g. NodeJS) easily.**
+
+    **Target-only cross-compile**<a name="cross-compile-target-only"></a>
+    
+    - Redirect all compiler related commands to the toolchain's then build.
+
+        ```
+        android-gcc-toolchain arm64 <<< "./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl && make"
+        ```
+        
+        This is the most concrete way to do target-only cross-compile.
+        Attempt to call gcc related commands without explicit path will fall into the toolchain's one.
+        
+    - Enter a `$CC`... predefined environment to build.
+    
+        ```
+        android-gcc-toolchain arm64 -c <<< "./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl && make"
+        ```
+        
+        *The first `-c` option is for `android-gcc-toolchain`, not for bash.*   
+        This is a graceful way to do target-only cross-compile.
+        
+    **Hybrid cross-compile(Both target and host side have output)**<a name="cross-compile-target-and-host"></a>
+    
+    - Enter a `$CC_target`... predefined environment to build.
+
+        ```
+        android-gcc-toolchain arm64 -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
+        ```
+        
+        *The `-C` option is UPPER CASE.*  
+        This is the most graceful way to do a hybrid cross-compile, it assumes:
+        - Compiler commands for target(Android) honor the `$CC_target`...,
+        - Compiler commands for host(Mac) honor the `$CC_host`... or `$CC`... or pick from `$PATH`.
+        
+        **But above command will run into error, just because several wrong project settings.**  
+        You can use [Hack Mode](#about-hack-mode) to overcome them easily, 
+        otherwise you have to find and modify the wrong settings each time.
+
+4. **Automatically get minimum/maximum `Android API level` from NDK.**
+
+    By default, get minimum API level from NDK for specified arch smartly, 
+    from actual folder names `$NDK/platforms/android-*/arch-$ARCH`, instead of a fixed 21.
+    
+    As described in [options](#options), you can pass `max`,`99` or verbose `--api max` to get maximum API level.
+    
+    ```
+    $ android-gcc-toolchain arm64 max
+      android-24-arm64 toolchain is ready! ...
+    ```
+
+5. **Automatically create standalone toolchain the first time.**
+
+    As described in [options](#options), options are compatible with $NDK/build/tools/make_standalone_toolchain.py:
+    `--arch`,`--api`, `--stl`,`--force`.
+    
 6. **(TODO) Miscellaneous**
     - (TODO): Create a docker container for this tool. 
     - (TODO): Use symbol/hard link to speed up creation of toolchain and save disk space. 
     - (TODO): Auto detect NDK, auto download NDK optionally. 
     - (TODO): Support brew install. 
 
-###Prerequisite
+### About substitute mode
 
-- Install Android NDK (from Android SDK Manager or directly download it) and set NDK env to the dir.
+Without `-c` nor `-C` option, the specified command will run in a `substitute mode`.
+In this mode, the following commands are redirected to the toolchain's one.
+- cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip
+- readelf objdump nm c++filt strings elfedit objcopy
+- gdb yasm llvm-as llvm-dis llvm-link FileCheck
+- addr2line size gcov gprof dwp
+- make awk python pydoc
+- ndk-depends ndk-gdb ndk-which ndk-stack
 
-    ```
-    export NDK=__the_top_dir_of_installed_NDK__
-    ```
+### About env vars passed to CMD
 
-###Install
+As described in [options](#options),
+Following vars will be set for specified Command Mode, **otherwise cleared**.
+- GYP_DEFINES CC CXX LD AR AS RANLIB STRIP NM LINK CC_target CXX_target LD_target AR_target AS_target RANLIB_target STRIP_target NM_target LINK_target
 
-Almost nothing more than `git clone` this project to somewhere e.g. `~/Downloads/android-gcc-toolchain`.
-Then all commands except `android-gcc-enter` are just there for you.
-The `android-gcc-enter` is a shell function come from this project 
-which need you load my `bashrc` first, to use it, you need use `source` command to load it first.
-(once you load it, all commands are cached as shell functions.)
+BIN AGCC_BIN AGCC_HACK_DIR will be set for cleaner and as mnemonics.
 
-- So the simplest way is:
+`PATH` and `LIBRARY_PATH` will be changed under certain conditions described above.
 
-    ```
-    cd ~/Downloads && git clone https://github.com/sjitech/android-gcc-toolchain && \
-    source ./android-gcc-toolchain/bashrc --save
-    ```
-    Tip: you can specify other bash profile such as ~/.profile as last argument.
+When called recursively, it will try to restore `PATH` `LIBRARY_PATH` first.
 
-###Uninstall
+### About where the toolchain created
 
-Manually remove script with mark "ANDROID_GCC_BASHRC" from your .bash_profile or use following command to remove it.
-```
-source ~/Downloads/android-gcc-toolchain/bashrc --restore
-```
-    
-###Caveats
-- This tool create files in your NDK dir, named `std-toolchains`.
+This tool create dir in your NDK dir, in following format:   
+ `$NDK/std-toolchains/android-APIL-ARCH[STL_TAG]`
 
-    `$NDK/std-toolchains/android-APIL-ARCH`
+This is not only for easy management, but also for keep some commands work. 
+e.g. `ndk-gdb`, `ndk-which`... call neighbour files from `\$NDK/SOME_DIR` level.
+When in substitute mode, such command is called into the toolchain's one.
+To keep them works same as previous, i have to choose such a dir hierarchy.
 
-    This is not only for easy management, but also for some commands e.g. 
-    `ndk-gdb`,`ndk-which`... call neighbour files from this dir level.
-    This is only necessary for `android-gcc-enter`'s dedicated environment
-    where `ndk-*` be redirected so need keep it works as normal.
-
-- If you upgrade your NDK, you need specify `--force` option to 
-`android-gcc-toolchain` or `android-gcc-enter` to recreate toolchains. 
+After you upgrade your NDK, you need specify `--force` option to recreate toolchains. 
 
 ----
 
-### About hack mode: `android-gcc-toolchain --hack -C`
+###About hack mode
+ 
+`--hack [HACK] -C`
 
-Currently `--hack` solves following problems for Mac OS X:
+It solves some common cross-compile problems on Mac:
 
 1. **ar**: Some projects does not honor `$AR_target` when make Android-side static
  lib(*.a). Instead, they call Mac-side ar command, so cause wrong result.
  
-    `--hack` detect input *.o file format, Mac or Android, then call correct one.
-    This is done by hook `ar` command via \$PATH. (prepend hack/...bin to \$PATH 
-    so ...bin/ar will be called instead.)
+    `--hack` prepend hack/... to `$PATH` so its ar will be called instead.
+    **It detect input \*.o file format, Mac or Android, then call correct one.**
  
 2. **librt**: Some projects use link option `-lrt` (librt) comes from linux, but
  Mac have no librt, so cause "library not found for -lrt".
  
-    `--hack` append hack/...lib to `$LIBRARY_PATH`, so the fake librt can be linked.
+    `--hack` append hack/... to `$LIBRARY_PATH`, so its fake **librt can be linked.**
     The fake librt does not export any symbol, it is just a reference to the most
-    commonly linked lib: /usr/lib/libSystem.B.dylib
+    commonly linked lib: `/usr/lib/libSystem.B.dylib`
  
-3. **`host_os`**: Some wrong gyp treat `host_os` as `android` so compile wrong files."
+3. **gyp `host_os` var**: Some wrong gyp treat `host_os` as `android` so compile wrong files."
 
-    `--hack` will set env `GYP_DEFINES=\"host_os=mac\"` for gyp."
+    `--hack` will set env `GYP_DEFINES="host_os=mac"` for gyp."
 
-4. (Optional) **m32**: On 64bit OS, some projects added `-m32` option to gcc/g++ to produce
- 32bit codes, but some not added, cause link error of mixing 64 and 32bit codes.
+4. **-m32**<a name="hack-m32"></a>: On 64bit OS, some projects added `-m32` option to gcc/g++ to produce
+ 32bit codes, but some forgot, cause link error of mixing 64 and 32bit codes.
  
-    `--hack m32` forcibly add `-m32` option(cause 32bit codes) by hook gcc/g++ via \$PATH.
- 
-5. (Optional) **no-m32**: Same problem as 4.
- 
-    `--hack no-m32` forcibly remove `-m32` option(cause 64bit codes).
+    `--hack m32` prepend hack/... to `$PATH` so its gcc/g++ will be called instead.
+    **It forcibly add -m32 option then call original gcc/g++.**
 
 For example, 
 
-###Build NodeJS for Android arm64 perfectly on Mac OS X.
+### Build NodeJS for Android perfectly on Mac.
 
 **`perfectly` means do not add any `--without-...` option.**
 
-NodeJS is the latest master version, at least 6.3.1
-(HEAD is https://github.com/nodejs/node/commit/b9487449e151b02ff8cb1f3b4a0311e9eb0878e2)
+NodeJS: tested on 6.3.1, 6.4.0
 
-```
-$ android-gcc-toolchain arm64 --hack -C
-bash-3.2$ ./configure --dest-cpu=arm64 --dest-os=android && make -j4
-...
-bash-3.2$ ls -lF
-$ ll out/Release
-total 136904
-drwxr-xr-x   4 q  staff       136  8 13 10:21 .deps/
--rwxr-xr-x   1 q  staff   7026496  8 13 10:39 cctest*
--rwxr-xr-x   1 q  staff   2564184  8 13 10:23 genccode*
--rwxr-xr-x   1 q  staff   2787332  8 13 10:23 genrb*
--rwxr-xr-x   1 q  staff   2228608  8 13 10:23 iculslocs*
--rwxr-xr-x   1 q  staff   2648664  8 13 10:23 icupkg*
--rwxr-xr-x   1 q  staff  15370648  8 13 10:29 mksnapshot*
--rwxr-xr-x   1 q  staff  34321312  8 13 10:39 node*
-drwxr-xr-x   3 q  staff       102  8 13 10:19 obj/
-drwxr-xr-x  16 q  staff       544  8 13 10:29 obj.host/
-drwxr-xr-x  30 q  staff      1020  8 13 10:39 obj.target/
--rwxr-xr-x   1 q  staff   3126928  8 13 10:22 openssl-cli*
-bash-3.2$
-bash-3.2$ file out/Release/*
-out/Release/cctest:      ELF 64-bit LSB shared object, version 1 (SYSV), dynamically linked (uses shared libs), not stripped
-out/Release/genccode:    Mach-O 64-bit executable x86_64
-out/Release/genrb:       Mach-O 64-bit executable x86_64
-out/Release/iculslocs:   Mach-O 64-bit executable x86_64
-out/Release/icupkg:      Mach-O 64-bit executable x86_64
-out/Release/mksnapshot:  Mach-O 64-bit executable x86_64
-out/Release/node:        ELF 64-bit LSB shared object, version 1 (SYSV), dynamically linked (uses shared libs), not stripped
-out/Release/obj:         directory
-out/Release/obj.host:    directory
-out/Release/obj.target:  directory
-out/Release/openssl-cli: ELF 64-bit LSB shared object, version 1 (SYSV), dynamically linked (uses shared libs), not stripped
-```
-You can see the most annoying mksnapshot, genccode ... have been produced successfully.
+- For Android `arm64` architecture
 
-You can confirm the environment.
-```
-bash-3.2$ which ar
-/Users/q/Downloads/android-gcc-toolchain/hack/Darwin/bin/ar
-bash-3.2$ env |grep -E 'AR_|LIBRARY_PATH'
-LIBRARY_PATH=/Users/q/Downloads/android-gcc-toolchain/hack/Darwin/lib
-_AR_host=/usr/bin/ar
-AR_target=/Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-21-arm64/bin/ar
-```
+    ```
+    android-gcc-toolchain arm64 --hack -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
+    ```
+- For Android `arm` architecture
 
-###Build NodeJS for Android arm perfectly on Mac OS X.
-```
-$ android-gcc-toolchain arm --hack m32 -C
-bash-3.2$ ./configure --dest-cpu=arm --dest-os=android && make -j4
-...
-```
-
+    ```
+    android-gcc-toolchain arm --hack m32 -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
+    ```
+        
+For more detail, [About hack mode](#about-hack-mode) and [build\-nodejs\-for\-android\-perfectly\-on\-Mac](https://github.com/sjitech/build-nodejs-for-android-perfectly-on-Mac).
+    
 Good luck.
