@@ -114,7 +114,7 @@ if [[ ! $CMD && $1 == --help ]]; then
     _agcc-msg "--------------------------------------------------------------------------------"
     _agcc-msg "CMD and ARGS: The external command to be run"
     _agcc-msg ""
-    _agcc-msg " CMD            Any command. Default is bash."
+    _agcc-msg " CMD            Any command. Default is /bin/bash."
     _agcc-msg "                The first non-option arg will be treated as CMD."
     _agcc-msg "                To avoid ambiguous with other option, place - or -- before CMD"
     _agcc-msg " ARGS...        The arguments for the CMD"
@@ -359,7 +359,6 @@ fi
 #check interactive bash just for show guide and prompt
 GUIDE=""
 [[ ! $CMD && -t 0 && -t 2 ]] && GUIDE=YES
-[[ ! $CMD ]] && CMD=bash
 _agcc-dbg "GUIDE: ${GUIDE:-NO}"
 
 ############################################################
@@ -535,14 +534,15 @@ case $CMD_MODE in
     #do some hack for compiler
     if [[ ${#HACK[@]} -gt 0 ]]; then
 
-        thisDir=${0%/*}
-        if target=`readlink "$0"`; then
-            if [[ $target == /* ]]; then
+        thisDir=${BASH_SOURCE[0]%/*}
+        if target=`readlink "${BASH_SOURCE[0]}"`; then
+            if [[ $target == /* ]]; then     #absolute path target
                 thisDir=${target%/*}
-            elif [[ $target == */* ]]; then
+            elif [[ $target == */* ]]; then  #relative path target
                 thisDir+=/${target%/*}
             fi
         fi
+        _agcc-dbg "thisDir: \"$thisDir\""
 
         case $OSTYPE in
             darwin*) HOST_OS="mac" ;;
@@ -628,14 +628,29 @@ esac
 
 ############################################################
 #finally, call CMD
-if [[ $AGCC_DBG ]]; then
-    tmpStr=`which "$CMD"` && [[ $tmpStr != $CMD ]] && _agcc-dbg "CMD path: \"$tmpStr\""
-    if [[ $# -gt 0 ]]; then
-        _agcc-dbg "run CMD: \"$CMD\" with $# args: {"
-        for arg in "$@"; do _agcc-dbg " \"$arg\""; done
-        _agcc-dbg "}"
+
+if [[ $GUIDE ]]; then
+    #forcibly set my prompt ($PS1) via an on-fly init-file yet simulate interactive non-login bash
+    exec /bin/bash --init-file <(
+        echo '[[ -f /etc/bash.bashrc ]] && source /etc/bash.bashrc'
+        echo '[[ -f ~/.bashrc ]] && source ~/.bashrc'
+        echo "PS1='$PS1'"
+    )
+else
+    if [[ $CMD ]]; then
+        if [[ $AGCC_DBG ]]; then
+            tmpStr=`which "$CMD"` && [[ $tmpStr != $CMD ]] && _agcc-dbg "CMD path: \"$tmpStr\""
+            if [[ $# -gt 0 ]]; then
+                _agcc-dbg "run CMD: \"$CMD\" with $# args: {"
+                for arg in "$@"; do _agcc-dbg " \"$arg\""; done
+                _agcc-dbg "}"
+            else
+                _agcc-dbg "run CMD: \"$CMD\""
+            fi
+        fi
+
+        exec -- "$CMD" "$@"
     else
-        _agcc-dbg "run CMD: \"$CMD\""
+        exec /bin/bash
     fi
 fi
-exec -- "$CMD" "$@"
