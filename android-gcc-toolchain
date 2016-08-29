@@ -316,7 +316,13 @@ BIN=$DIR/bin
 
 if [[ ! -d $DIR || $FORCE ]]; then
     _agcc-msg "Make \$NDK/std-toolchains/$NAME because it does not exists..."
-    "$NDK/build/tools/make_standalone_toolchain.py" --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE
+
+    if ! PYTHON=`which python`; then
+        PYTHON=("$NDK"/prebuilt/*/bin/python)
+        [[ $PYTHON == "$NDK/prebuilt/*/bin/python" ]] && { _agcc-msg "python not found in \$PATH and \$NDK/prebuilt/*/bin"; exit 1; }
+    fi
+    _agcc-dbg "use \"$PYTHON\""
+    "$PYTHON" "$NDK/build/tools/make_standalone_toolchain.py" --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE
 
     if [[ -e "$BIN/$ARCH_PREFIX"gcc ]]; then
         _agcc-msg "Done"
