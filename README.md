@@ -292,12 +292,40 @@ NodeJS: tested on 6.3.1, 6.4.0
     ```
     android-gcc-toolchain arm64 --hack -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
     ```
+
 - For Android `arm` architecture
 
     ```
     android-gcc-toolchain arm --hack m32 -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
     ```
         
+- For Android `x86` architecture
+
+    ```
+    android-gcc-toolchain x86 --hack m32 -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
+    ```
+        
+- For Android `x64` architecture
+
+    Not perfect yet.
+    
+    To support snapshot or icu etc., you need modify a bug of configure script:
+    Change `target_arch != host_arch` to `True`
+
+    ```
+      cross_compiling = target_arch != host_arch     #here
+      cross_compiling = True;
+      want_snapshots = not options.without_snapshot
+      o['variables']['want_separate_host_toolset'] = int(
+          cross_compiling and want_snapshots)
+    ```
+    
+    Then run configure script, but still need `--openssl-no-asm` to avoid compiler error which i have not studied.
+    
+    ```
+    android-gcc-toolchain x64 --hack -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
+    ```
+
 For more detail, [About hack mode](#about-hack-mode) and [build\-nodejs\-for\-android\-perfectly\-on\-Mac](https://github.com/sjitech/build-nodejs-for-android-perfectly-on-Mac).
     
 Good luck.
