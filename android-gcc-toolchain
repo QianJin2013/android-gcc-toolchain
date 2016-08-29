@@ -315,7 +315,11 @@ DIR=$NDK/std-toolchains/$NAME
 BIN=$DIR/bin
 
 if [[ ! -d $DIR || $FORCE ]]; then
-    _agcc-msg "Make \$NDK/std-toolchains/$NAME because it does not exists..."
+    if [[ -d $DIR || $FORCE ]]; then
+        _agcc-msg "Make \$NDK/std-toolchains/$NAME forcibly"
+    else
+        _agcc-msg "Make \$NDK/std-toolchains/$NAME because it does not exists..."
+    fi
 
     if ! PYTHON=`which python`; then
         PYTHON=("$NDK"/prebuilt/*/bin/python)
@@ -335,6 +339,9 @@ if [[ ! -d $DIR || $FORCE ]]; then
 else
     ls "$BIN/$ARCH_PREFIX"gcc > /dev/null || exit 1
 fi
+
+#do not want toolchain's make awk python take precedence of existing one. So move it to ../tools
+[[ -f "$BIN"/python ]] && mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/../tools/ 2>/dev/null
 
 ############################################################
 #make some symbol-link such as gcc @-> arm-linux-androideabi-gcc
@@ -387,6 +394,27 @@ if [[ $AGCC_BIN ]]; then
             if [[ ! $CC_target && ! $CC ]]; then #if previous mode is substitute mode
                 _agcc-guide "Previous \$AGCC_BIN not in \$PATH."
                 _agcc-guide " \"${AGCC_BIN/#$NDK/\$NDK}\""
+                _agcc-guide ""
+            fi
+        fi
+    fi
+
+    [[ $GUIDE ]] && oldStr=$PATH
+
+    d=$AGCC_BIN/../tools
+    PATH=${PATH//:$d:/:}    #replace :dir: with :
+    PATH=${PATH#$d:}        #remove   dir: from head
+    PATH=${PATH%:$d}        #remove  :dir  from tail
+
+    if [[ $GUIDE ]]; then
+        if [[ $oldStr != $PATH ]]; then
+            _agcc-guide "Removed previous \$AGCC_BIN/../tools from \$PATH."
+            _agcc-guide " \"${AGCC_BIN/#$NDK/\$NDK}/../tools\""
+            _agcc-guide ""
+        else
+            if [[ ! $CC_target && ! $CC ]]; then #if previous mode is substitute mode
+                _agcc-guide "Previous \$AGCC_BIN/../tools not in \$PATH."
+                _agcc-guide " \"${AGCC_BIN/#$NDK/\$NDK}../tools\""
                 _agcc-guide ""
             fi
         fi
@@ -462,16 +490,18 @@ fi
 case $CMD_MODE in
 ############################################################
 "")  #$PATH mode(substitute mode)
-    export PATH=$BIN:$PATH
+    export PATH=$BIN:$PATH:$BIN/../tools
 
     if [[ $GUIDE ]]; then
-        _agcc-guide "Prepended to \$PATH. So you can use these commands directly here:"
-        _agcc-guide " cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip"
-        _agcc-guide " readelf objdump nm c++filt strings elfedit objcopy"
-        _agcc-guide " gdb yasm llvm-as llvm-dis llvm-link FileCheck"
-        _agcc-guide " addr2line size gcov gprof dwp"
-        _agcc-guide " make awk python pydoc"
-        _agcc-guide " ndk-depends ndk-gdb ndk-which ndk-stack"
+        _agcc-guide "Prepended to \$PATH. So you can use these commands (First choice):"
+        _agcc-guide " cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip ..."
+        _agcc-guide " readelf objdump nm c++filt elfedit objcopy strings size ..."
+        _agcc-guide " gdb addr2line gcov gprof gcore dwp yasm ..."
+        _agcc-guide " llvm-as llvm-dis llvm-link FileCheck ..."
+        _agcc-guide " ndk-depends ndk-gdb ndk-which ndk-stack ..."
+        _agcc-guide ""
+        _agcc-guide "Appended \$BIN/../tools to \$PATH. Following commands are also available:"
+        _agcc-guide " make awk python pydoc ...(but NOT first choice)"
         _agcc-guide ""
 
         #change prompt
