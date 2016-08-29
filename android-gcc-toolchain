@@ -225,7 +225,7 @@ if [[ $AGCC_DBG ]]; then
     _agcc-dbg "}"
 fi
 
-############################################################
+################################################################################
 #check arch and cross-compile executable's name prefix
 case ${ARCH:=arm} in
     arm)    ARCH_PREFIX=arm-linux-androideabi- ;;
@@ -237,7 +237,7 @@ case ${ARCH:=arm} in
     *) _agcc-msg "\"$ARCH\" is not a valid arch. It must be arm(default)|arm64|x86|x86_64|mips|mips64 or aliases i386|ia32|x64|mipsel|mipsel64"; exit 1 ;;
 esac
 
-############################################################
+################################################################################
 #check Android API level
 case ${APIL:=min} in
     min|max|0|99)
@@ -270,7 +270,7 @@ case ${APIL:=min} in
         ;;
 esac
 
-############################################################
+################################################################################
 #check C++ STL
 case ${STL:=gnustl} in
     gnustl ) STL_TAG="" ;;
@@ -279,7 +279,7 @@ case ${STL:=gnustl} in
     *) _agcc-msg "\"$STL\" is not a valid C++ STL. It must be gnustl(default)|libc++|stlport"; exit 1 ;;
 esac
 
-############################################################
+################################################################################
 #check HACK mode
 if [[ ${#HACK[@]} -gt 0 ]]; then
     if [[ $CMD_MODE != -C ]]; then
@@ -292,7 +292,7 @@ if [[ ${#HACK[@]} -gt 0 ]]; then
     done
 fi
 
-############################################################
+################################################################################
 if [[ $AGCC_DBG ]]; then
     _agcc-dbg "args {"
     _agcc-dbg " ARCH     \"$ARCH\""
@@ -307,7 +307,7 @@ if [[ $AGCC_DBG ]]; then
     _agcc-dbg "}"
 fi
 
-############################################################
+################################################################################
 #create or check standalone toolchain
 [[ ! $NDK ]] && { _agcc-msg "\$NDK is empty. Please run: export NDK=__the_top_dir_of_installed_NDK__"; exit 1; }
 NAME=android-$APIL-$ARCH$STL_TAG
@@ -343,7 +343,7 @@ fi
 #do not want toolchain's make awk python take precedence of existing one. So move it to ../tools
 [[ -f "$BIN"/python ]] && mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/../tools/ 2>/dev/null
 
-############################################################
+################################################################################
 #make some symbol-link such as gcc @-> arm-linux-androideabi-gcc
 #also link cc @-> gcc
 pushd "$BIN" > /dev/null
@@ -351,14 +351,14 @@ pushd "$BIN" > /dev/null
     [[ ! -e cc ]] && ln -s "$ARCH_PREFIX"gcc cc
 popd > /dev/null
 
-############################################################
+################################################################################
 #if end with dash, then just print bin path(slash ended)
 if [[ $DASH && ! $CMD ]]; then
     echo "$BIN/"
     exit 0
 fi
 
-############################################################
+################################################################################
 #otherwise, prepare env then run command
 
 
@@ -368,13 +368,13 @@ fi
 
 
 
-############################################################
+################################################################################
 #check interactive bash just for show guide and prompt
 GUIDE=""
 [[ ! $CMD && -t 0 && -t 2 ]] && GUIDE=YES
 _agcc-dbg "GUIDE: ${GUIDE:-NO}"
 
-############################################################
+################################################################################
 #remove previous bin path from $PATH
 if [[ $AGCC_BIN ]]; then
 
@@ -406,23 +406,25 @@ if [[ $AGCC_BIN ]]; then
     PATH=${PATH#$d:}        #remove   dir: from head
     PATH=${PATH%:$d}        #remove  :dir  from tail
 
-    if [[ $GUIDE ]]; then
-        if [[ $oldStr != $PATH ]]; then
-            _agcc-guide "Removed previous \$AGCC_BIN/../tools from \$PATH."
-            _agcc-guide " \"${AGCC_BIN/#$NDK/\$NDK}/../tools\""
-            _agcc-guide ""
-        else
-            if [[ ! $CC_target && ! $CC ]]; then #if previous mode is substitute mode
-                _agcc-guide "Previous \$AGCC_BIN/../tools not in \$PATH."
-                _agcc-guide " \"${AGCC_BIN/#$NDK/\$NDK}../tools\""
+    if [[ $AGCC_DBG ]]; then
+        if [[ $GUIDE ]]; then
+            if [[ $oldStr != $PATH ]]; then
+                _agcc-guide "Removed previous \$AGCC_BIN/../tools from \$PATH."
+                _agcc-guide " \"${AGCC_BIN/#$NDK/\$NDK}/../tools\""
                 _agcc-guide ""
+            else
+                if [[ ! $CC_target && ! $CC ]]; then #if previous mode is substitute mode
+                    _agcc-guide "Previous \$AGCC_BIN/../tools not in \$PATH."
+                    _agcc-guide " \"${AGCC_BIN/#$NDK/\$NDK}../tools\""
+                    _agcc-guide ""
+                fi
             fi
         fi
     fi
 fi
 unset AGCC_BIN
 
-############################################################
+################################################################################
 #remove previous hack dir from $PATH, $LIBRARY_PATH
 if [[ $AGCC_HACK_DIR ]]; then
 
@@ -467,14 +469,14 @@ if [[ $AGCC_HACK_DIR ]]; then
 fi
 unset AGCC_HACK_DIR
 
-############################################################
+################################################################################
 #clear some maybe-inherited var
 unset GYP_DEFINES
 unset CC CXX LD AR AS RANLIB STRIP NM LINK
 unset CC_target CXX_target LD_target AR_target AS_target RANLIB_target STRIP_target NM_target LINK_target
 unset PS1
 
-############################################################
+################################################################################
 #save bin dir for cleaner and as mnemonics
 export AGCC_BIN=$BIN
 export BIN
@@ -487,10 +489,19 @@ if [[ $GUIDE ]]; then
     _agcc-guide ""
 fi
 
+################################################################################
+#append $BIN/../tools to $PATH so python make awk can be used if no existing one
+export PATH=$PATH:$BIN/../tools
+if [[ $AGCC_DBG ]]; then
+    _agcc-guide "Appended \$BIN/../tools to \$PATH. Following commands are also available:"
+    _agcc-guide " make awk python pydoc ...(but NOT first choice)"
+    _agcc-guide ""
+fi
+
 case $CMD_MODE in
-############################################################
+################################################################################
 "")  #$PATH mode(substitute mode)
-    export PATH=$BIN:$PATH:$BIN/../tools
+    export PATH=$BIN:$PATH
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Prepended to \$PATH. So you can use these commands (First choice):"
@@ -500,15 +511,12 @@ case $CMD_MODE in
         _agcc-guide " llvm-as llvm-dis llvm-link FileCheck ..."
         _agcc-guide " ndk-depends ndk-gdb ndk-which ndk-stack ..."
         _agcc-guide ""
-        _agcc-guide "Appended \$BIN/../tools to \$PATH. Following commands are also available:"
-        _agcc-guide " make awk python pydoc ...(but NOT first choice)"
-        _agcc-guide ""
 
         #change prompt
         export PS1="[$NAME] ";
     fi
     ;;
-############################################################
+################################################################################
 -c) #$CC mode
     export CC=$BIN/gcc
     export CXX=$BIN/g++
@@ -537,7 +545,7 @@ case $CMD_MODE in
         export PS1="[$NAME \\\$CC] ";
     fi
     ;;
-############################################################
+################################################################################
 -C) #$CC_target mode
     export CC_target=$BIN/gcc
     export CXX_target=$BIN/g++
@@ -566,7 +574,7 @@ case $CMD_MODE in
         export PS1="[$NAME \\\$CC_target] "
     fi
 
-    ############################################################
+    ################################################################################
     #do some hack for compiler
     if [[ ${#HACK[@]} -gt 0 ]]; then
 
@@ -662,7 +670,7 @@ case $CMD_MODE in
     ;;
 esac
 
-############################################################
+################################################################################
 #finally, call CMD
 
 if [[ $GUIDE ]]; then
