@@ -29,9 +29,6 @@ otherwise link it to /usr/local/bin/ or add the path to the $PATH.
 - Enter a dedicated shell where can run android gcc related commands easily:<a name="screenshot-dedicated-shell"></a>
 ![android-gcc-enter](img/android-gcc-enter.png)
 
-- Cross-compile AUTOCONF and GYP project easily:<a name="screenshot-cross-compile-autoconf-and-gyp"></a>
-![android-gcc-toolchain](img/android-gcc-toolchain.png)
-
 ### Usage
 
 Use or create toolchain, set env and run command, or print "the bin dir/".
