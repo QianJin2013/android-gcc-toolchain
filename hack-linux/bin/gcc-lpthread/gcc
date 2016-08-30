@@ -12,11 +12,18 @@ EXE_PATH=""
 #split $PATH by :, save it to pathList as array
 IFS=: pathList=($PATH); unset IFS
 
+foundMyself=""
 for d in "${pathList[@]}"; do
     #if exe in the dir and not same as me, then that is the real path i want
-    if [[ -f $d/$EXE_NAME && ! $d/$EXE_NAME -ef "$0" ]]; then
-        EXE_PATH=$d/$EXE_NAME
-        break
+    if [[ -f $d/$EXE_NAME ]]; then
+        if [[ $d/$EXE_NAME -ef "$0" ]]; then
+            foundMyself=YES
+        else
+            if [[ $foundMyself ]]; then
+                EXE_PATH=$d/$EXE_NAME
+                break
+            fi
+        fi
     fi
 done
 
