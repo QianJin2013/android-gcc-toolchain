@@ -1,6 +1,6 @@
 #!/bin/bash
-EXE_NAME=gcc
-function _agcc-msg { echo "[$EXE_NAME-m32]" "$@" >&2; }
+EXE_NAME=g++
+function _agcc-msg { echo "[$EXE_NAME-lpthread]" "$@" >&2; }
 function _agcc-dbg { [[ $AGCC_DBG ]] && _agcc-msg "$@"; }
 
 ###############################################################################
@@ -26,17 +26,28 @@ if [[ ! $EXE_PATH ]]; then
 fi
 
 ###############################################################################
-#if already have -m32 option then run command without change.
+#if already have -lpthread option then run command without change.
 
+has_lLIB=""
 for arg in "$@"; do
-    if [[ $arg == -m32 ]]; then
-        _agcc-dbg "call \"$EXE_PATH\" (already specified -m32 option)"
+    if [[ $arg == -lpthread ]]; then
+        _agcc-dbg "call \"$EXE_PATH\" (already specified -lpthread option)"
         exec "$EXE_PATH" "$@"
         exit
+    elif [[ $arg == -l* ]]; then
+        has_lLIB=1
     fi
 done
 
+#if not sure how to insert -lpthread option then run command without change.
+if [[ ! $has_lLIB ]]; then
+    _agcc-dbg "call \"$EXE_PATH\" (no any -lLIB option)"
+    exec "$EXE_PATH" "$@"
+    exit
+fi
+
 ###############################################################################
 #otherwise run command with -lpthread
-_agcc-msg "call \"$EXE_PATH\" with -m32 option"
-exec "$EXE_PATH" -m32 "$@"
+
+_agcc-msg "call \"$EXE_PATH\" with -lpthread"
+exec "$EXE_PATH" "$@" -lpthread
