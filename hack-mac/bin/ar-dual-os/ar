@@ -13,11 +13,9 @@ EXE_PATH=""
 IFS=: pathList=($PATH); unset IFS
 
 for d in "${pathList[@]}"; do
-    _agcc-dbg "check $EXE_NAME in $d"
     #if exe in the dir and not same as me, then that is the real path i want
     if [[ -f $d/$EXE_NAME && ! $d/$EXE_NAME -ef "$0" ]]; then
         EXE_PATH=$d/$EXE_NAME
-        _agcc-dbg "found $EXE_NAME: \"$EXE_PATH\""
         break
     fi
 done

@@ -1,10 +1,16 @@
 ## android-gcc-toolchain
-A single command to enter android cross compile environment without manually create NDK standalone toolchain. 
+A single command to enter android cross compile environment without manually create NDK standalone toolchain and env vars. 
 
-Tested on Mac OS X 10.11.5/10.11.6 EI Capitan, NDK 12.1.29.  
-Should also works on Linux (not tested yet).
+- Mac: OS X 10.11.5/10.11.6 EI Capitan (64bit)
+    - [NDK 12.1.29](https://dl.google.com/android/repository/android-ndk-r12b-darwin-x86_64.zip)
+- Linux: Ubuntu 16.04 (64bit)
+    - [NDK 12.1.29](https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip)
 
-As an example, [Build NodeJS for Android perfectly on Mac](#build-nodejs-for-android-perfectly-on-mac).
+As an example, see
+
+- [Build NodeJS for Android perfectly on Mac](#build-nodejs-for-android-perfectly-on-mac).
+- [Build NodeJS for Android perfectly on Linux](#build-nodejs-for-android-perfectly-on-linux).
+
 
 ### Prerequisite
 
@@ -28,7 +34,7 @@ otherwise link it to /usr/local/bin/ or add the path to the $PATH.
 
 ### Usage
 
-Use or create toolchain, set env and run command, or print path of the bin dir.
+Use or create toolchain, set env and run command, or print "the bin dir/".
 
 *Note: words in `[  ]` means may be omitted.*
 <a name="options"></a>
@@ -41,7 +47,7 @@ Toolchain options: specify which toolchain to use or create
  [--arch] ARCH  Android architecture:
                 {arm(default)|arm64|x86|x86_64|mips|mips64} or aliases:
                 i386,ia32(=x86), x64(=x86_64), mipsel, mipsel64
- [--api]  APIL  Android API Level:
+ [--api]  APIL  Android API level:
                 {min(default)|max|an integer} or aliases:
                 0(=min), 99(=max)
  [--stl]  STL   C++ STL to use:
@@ -49,23 +55,28 @@ Toolchain options: specify which toolchain to use or create
  --force        Delete existing toolchain dir then create
 
 Command Mode: Specify whether set $PATH or $CC... or $CC_target...
- omitted        This is the substitute mode.
+ omitted        This is the redirect mode.
                 Set $PATH to redirect gcc... to the toolchain's gcc...
                 e.g. export PATH=".../std-toolchains/.../bin:$PATH"
  -c             Set $CC,$CXX,$LD,$AR,$AS,$RANLIB,$STRIP,$NM,$LINK
                 e.g. export CC=".../std-toolchains/.../bin/gcc"
  -C             Set $CC_target,$CXX_target,$AR_target... ...$LINK_target
                 e.g. export CC_target=".../std-toolchains/.../bin/gcc"
-Misc options:
- --hack  [HACK] Only used for -C. To correctly handle ar, ld -lrt etc.
-                {m32} (Currently only have m32 option)
+
+Hack options:
+ --hack  HACK   To correctly handle ar, ld -lrt etc. Should be combination of
+                ar-dual-os,fake-librt,gcc-m32,g++-m32,gcc-lpthread,g++-lpthread,
+                joined by comma or space.
+                Available options depends on what's inside hack-<OS> dir.
+
+Special options:
  -              Means the end of options and next arg is CMD. But if nothing 
                 followed, then just print output the bin dir(slash ended).
  --             Same as -
 --------------------------------------------------------------------------------
 CMD and ARGS: The external command to be run
 
- CMD            Any command. Default is bash.
+ CMD            Any command. Default is /bin/bash.
                 The first non-option arg will be treated as CMD.
                 To avoid ambiguous with other option, place - or -- before CMD
  ARGS...        The arguments for the CMD
@@ -104,7 +115,7 @@ When want run commands(such as gcc), just prepend above command to your command.
         android-gcc-toolchain arm64 zsh                           #zsh
         ```
         
-        See also: [redirected commands list](#about-substitute-mode).
+        See also: [redirected commands list](#about-redirect-mode).
         
     - start an interactive bash with $CC... predefined
     
@@ -213,16 +224,17 @@ When want run commands(such as gcc), just prepend above command to your command.
     - (TODO): Auto detect NDK, auto download NDK optionally. 
     - (TODO): Support brew install. 
 
-### About substitute mode
+### About where the toolchain created
 
-Without `-c` nor `-C` option, the specified command will run in a `substitute mode`.
-In this mode, the following commands are redirected to the toolchain's one.
-- cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip
-- readelf objdump nm c++filt strings elfedit objcopy
-- gdb yasm llvm-as llvm-dis llvm-link FileCheck
-- addr2line size gcov gprof dwp
-- make awk python pydoc
-- ndk-depends ndk-gdb ndk-which ndk-stack
+This tool create dir in your NDK dir, in following format:   
+ `$NDK/std-toolchains/android-APIL-ARCH[STL_TAG]`
+
+This is not only for easy management, but also for keep some commands work. 
+e.g. `ndk-gdb`, `ndk-which`... call neighbour files from `\$NDK/SOME_DIR` level.
+When in redirect mode, such command is called into the toolchain's one.
+To keep them works same as previous, i have to choose such a dir hierarchy.
+
+After you upgrade your NDK, you need specify `--force` option to recreate toolchains. 
 
 ### About env vars passed to CMD
 
@@ -236,96 +248,109 @@ BIN AGCC_BIN AGCC_HACK_DIR will be set for cleaner and as mnemonics.
 
 When called recursively, it will try to restore `PATH` `LIBRARY_PATH` first.
 
-### About where the toolchain created
+### About redirect mode
 
-This tool create dir in your NDK dir, in following format:   
- `$NDK/std-toolchains/android-APIL-ARCH[STL_TAG]`
+Without `-c` nor `-C` option, the specified command will run in a `redirect mode`.
+In this mode, the following commands are redirected to the toolchain's one.
+- cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip ...
+- readelf objdump nm c++filt elfedit objcopy strings size ...
+- gdb addr2line gcov gprof gcore dwp yasm ...
+- llvm-as llvm-dis llvm-link FileCheck ...
+- ndk-depends ndk-gdb ndk-which ndk-stack ...
 
-This is not only for easy management, but also for keep some commands work. 
-e.g. `ndk-gdb`, `ndk-which`... call neighbour files from `\$NDK/SOME_DIR` level.
-When in substitute mode, such command is called into the toolchain's one.
-To keep them works same as previous, i have to choose such a dir hierarchy.
+And as a fallback, following commands (moved to ../tools) are also available
+but not the first choice if there are already same commands in $PATH.
+- make, python, awk...
 
-After you upgrade your NDK, you need specify `--force` option to recreate toolchains. 
-
-----
-
-###About hack mode
+###About Hack mode
  
-`--hack [HACK] -C`
-
 It solves some common cross-compile problems on Mac:
 
-1. **ar**: Some projects does not honor `$AR_target` when make Android-side static
+- **ar**: Some projects does not honor `$AR_target` when make Android-side static
  lib(*.a). Instead, they call Mac-side ar command, so cause wrong result.
  
-    `--hack` prepend hack/... to `$PATH` so its ar will be called instead.
+    `--hack ar-dual-os` prepend hack dir to `$PATH` so its ar will be called first.
     **It detect input \*.o file format, Mac or Android, then call correct one.**
  
-2. **librt**: Some projects use link option `-lrt` (librt) comes from linux, but
+- **librt**: Some projects use link option `-lrt` (librt) comes from linux, but
  Mac have no librt, so cause "library not found for -lrt".
  
-    `--hack` append hack/... to `$LIBRARY_PATH`, so its fake **librt can be linked.**
+    `--hack fake-librt` append hack dir to `$LIBRARY_PATH`, so **it can be linked.**
     The fake librt does not export any symbol, it is just a reference to the most
     commonly linked lib: `/usr/lib/libSystem.B.dylib`
  
-3. **gyp `host_os` var**: Some wrong gyp treat `host_os` as `android` so compile wrong files."
-
-    `--hack` will set env `GYP_DEFINES="host_os=mac"` for gyp."
-
-4. **-m32**<a name="hack-m32"></a>: On 64bit OS, some projects added `-m32` option to gcc/g++ to produce
+- **m32**: On 64bit OS, some projects added `-m32` option to gcc to produce
  32bit codes, but some forgot, cause link error of mixing 64 and 32bit codes.
  
-    `--hack m32` prepend hack/... to `$PATH` so its gcc/g++ will be called instead.
-    **It forcibly add -m32 option then call original gcc/g++.**
-
-For example, 
-
-### Build NodeJS for Android perfectly on Mac.
-
-**`perfectly` means do not add any `--without-...` option.**
-
-NodeJS: tested on 6.3.1, 6.4.0
-
-- For Android `arm64` architecture
-
-    ```
-    android-gcc-toolchain arm64 --hack -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
-    ```
-
-- For Android `arm` architecture
-
-    ```
-    android-gcc-toolchain arm --hack m32 -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
-    ```
-        
-- For Android `x86` architecture
-
-    ```
-    android-gcc-toolchain x86 --hack m32 -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
-    ```
-        
-- For Android `x64` architecture
-
-    Not perfect yet.
+    `--hack gcc-m32` prepend hack dir to `$PATH` so its gcc will be called first.
+    **It forcibly add -m32 option then call original gcc.**
     
-    To support snapshot or icu etc., you need modify a bug of configure script:
-    Change `target_arch != host_arch` to `True`
+    `--hack g++-m32` is similar to gcc-m32.
 
-    ```
-      cross_compiling = target_arch != host_arch     #here
-      cross_compiling = True;
-      want_snapshots = not options.without_snapshot
-      o['variables']['want_separate_host_toolset'] = int(
-          cross_compiling and want_snapshots)
-    ```
-    
-    Then run configure script, but still need `--openssl-no-asm` to avoid compiler error which i have not studied.
-    
-    ```
-    android-gcc-toolchain x64 --hack -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
-    ```
+It solves some common cross-compile problems on Linux:
 
-For more detail, [About hack mode](#about-hack-mode) and [build\-nodejs\-for\-android\-perfectly\-on\-Mac](https://github.com/sjitech/build-nodejs-for-android-perfectly-on-Mac).
+- **lpthread**: Some projects forgot to add this option so cause linker error:
+ `...libpthread.so.0: error adding symbols: DSO missing from command line`.
+
+    `--hack gcc-lpthread` prepend hack dir to `$PATH` so its gcc will be called first."
+    **It forcibly add -lpthread option then call original gcc when found any -l
+    option which means linking to some lib.**
+
+    `--hack g++-lpthread` is similar to gcc-lpthread.
+
+----
+
+### Build NodeJS for Android perfectly 
+
+**`perfectly` means do not add any `--without-...` option, nor modifying any source (include build settings)**
+
+[NodeJS](https://github.com/nodejs/node): 6.3.1-6.5.0
+
+It's easy to build NodeJS for Android if specify --without-snapshot --without-inspector --without-intl --openssl-no-asm.
+
+```
+android-gcc-toolchain ARCH <<< "./configure --dest-cpu=ARCH --dest-os=android --without-snapshot --without-inspector --without-intl --openssl-no-asm && make"
+```
+
+To perfectly build without losing any functionality, you can:
+
+- on Mac<a name="build-nodejs-for-android-perfectly-on-mac"></a>
+
+    - android-arm
     
+        ```
+        android-gcc-toolchain arm --hack ar-dual-os,fake-librt,gcc-m32,g++-m32 -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
+        ```
+            
+    - android-arm64
+    
+        ```
+        android-gcc-toolchain arm64 --hack ar-dual-os,fake-librt -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
+        ```
+    
+    - android-x86
+    
+        ```
+        android-gcc-toolchain x86 --hack ar-dual-os,fake-librt,gcc-m32,g++-m32 -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
+        ```
+            
+    - android-x64
+    
+        ```
+        sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
+        android-gcc-toolchain x64 --hack ar-dual-os,fake-librt -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
+        ```
+        The first command is to modify a bug of `configure` script, it's unavoidable.
+        The `--openssl-no-asm` is needed because openssl configure is not ready for android-x64. 
+
+- on Linux<a name="build-nodejs-for-android-perfectly-on-linux"></a>
+
+    - android-arm64
+    
+        ```
+        android-gcc-toolchain arm64 --hack gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
+        ```
+    
+See also: [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
+
 Good luck.
