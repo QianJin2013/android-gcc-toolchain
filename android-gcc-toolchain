@@ -216,7 +216,7 @@ if [[ ! $CMD && $1 == --help ]]; then
     _agcc-msg "#### cross-compile ffmpeg with cross-prefix=\`android-gcc-toolchain arm64 -\`"
     _agcc-msg "./configure --enable-cross-compile --cross-prefix=\`android-gcc-toolchain arm64 -\` --arch=arm64 --target-os=linux"
     _agcc-msg ""
-    _agcc-msg "#### cross-compile nodejs with \$CC_target... ready and some hacks"
+    _agcc-msg "#### cross-compile nodejs with \$CC_target... ready and some hacks (on Mac)"
     _agcc-msg "android-gcc-toolchain arm64 --hack ar-dual-os,fake-librt -C <<< \"./configure --dest-cpu=arm64 --dest-os=android && make\""
     _agcc-msg ""
     _agcc-msg "#### use \`Here Document\` to feed commands, compared to above \`Here String\`."
