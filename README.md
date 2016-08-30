@@ -342,11 +342,36 @@ To perfectly build without losing any functionality, you can:
 
 - on Linux<a name="build-nodejs-for-android-perfectly-on-linux"></a>
 
+    - android-arm
+    
+        ```
+        android-gcc-toolchain arm --hack gcc-m32,g++-m32,gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
+        ```
+
     - android-arm64
     
         ```
         android-gcc-toolchain arm64 --hack gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
         ```
+
+    - android-x86
+    
+        You'd better run `sudo apt-get install -y g++-multilib` first to include some 32bit lib and include files.
+        
+        ```
+        android-gcc-toolchain x86 --hack gcc-m32,g++-m32,gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
+        ```
+        
+        If it complains about sys/cdefs.h not found, then please `sudo apt-get install -y g++-multilib`. 
+    
+    - android-x64
+    
+        ```
+        sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
+        android-gcc-toolchain x64 --hack gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
+        ```
+        The first command is to modify a bug of `configure` script, it's unavoidable.
+        The `--openssl-no-asm` is needed because openssl configure is not ready for android-x64. 
     
 See also: [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
 
