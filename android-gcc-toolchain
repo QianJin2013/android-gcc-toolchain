@@ -1,7 +1,7 @@
 #!/bin/bash
 function _agcc-msg { echo "$@" >&2; }
 function _agcc-dbg { [[ $AGCC_DBG ]] && echo "$@" >&2; }
-function _agcc-guide { echo " " "$@" >&2; }
+function _agcc-guide { echo "" "$@" >&2; }
 
 ARCH=""; APIL=""; STL=""; FORCE=""; CMD_MODE=""; CMD=""; DASH=""; HACK=()
 
@@ -159,14 +159,14 @@ if [[ ! $CMD && $1 == --help ]]; then
     _agcc-msg "About redirect mode (Run command without -c or -C)"
     _agcc-msg ""
     _agcc-msg "In this mode, the following commands are redirected to the toolchain's one."
-    _agcc-msg " cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip ..."
+    _agcc-msg " cc(->gcc) gcc g++ c++ cpp clang clang++ yasm ld ar as ranlib strip ..."
     _agcc-msg " readelf objdump nm c++filt elfedit objcopy strings size ..."
-    _agcc-msg " gdb addr2line gcov gprof gcore dwp yasm ..."
+    _agcc-msg " gdb addr2line gcov gprof gcore dwp ..."
     _agcc-msg " llvm-as llvm-dis llvm-link FileCheck ..."
     _agcc-msg " ndk-depends ndk-gdb ndk-which ndk-stack ..."
     _agcc-msg ""
     _agcc-msg "In this mode, the following commands come from toolchain are also available:"
-    _agcc-msg " make awk python pydoc ... But not the first choice in \$PATH"
+    _agcc-msg " python make awk... But not the first choice in \$PATH"
     _agcc-msg "--------------------------------------------------------------------------------"
     _agcc-msg "About hack mode"
     _agcc-msg ""
@@ -419,7 +419,7 @@ else
 fi
 
 #do not want toolchain's make awk python take precedence of existing one. So move it to ../tools
-[[ -f "$BIN"/python ]] && mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/../tools/ 2>/dev/null
+[[ -f "$BIN"/idle ]] && mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/smtpd.py "$BIN"/2to3 "$BIN"/idle "$BIN"/../tools/ 2>/dev/null
 
 ################################################################################
 #make some symbol-link such as gcc @-> arm-linux-androideabi-gcc
@@ -552,12 +552,12 @@ case $CMD_MODE in
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Prepended to \$PATH. So you can use these commands (First choice):"
-        _agcc-guide " cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip ..."
+        _agcc-guide " cc(->gcc) gcc g++ c++ cpp clang clang++ yasm ld ar as ranlib strip ..."
         _agcc-guide " readelf objdump nm c++filt elfedit objcopy strings size ..."
         _agcc-guide " gdb addr2line gcov gprof gcore dwp yasm ..."
         _agcc-guide " llvm-as llvm-dis llvm-link FileCheck ..."
         _agcc-guide " ndk-depends ndk-gdb ndk-which ndk-stack ..."
-        _agcc-guide "As a fallback, ../tools(make,python,awk) are appended to \$PATH."
+        _agcc-guide "As a fallback, ../tools(python make awk...) are appended to \$PATH."
         _agcc-guide ""
 
         #change prompt
