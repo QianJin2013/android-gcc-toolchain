@@ -359,18 +359,18 @@ To perfectly build without losing any functionality, you can:
         You'd better run `sudo apt-get install -y g++-multilib` first to include some 32bit lib and include files.
         
         ```
+        sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
         android-gcc-toolchain x86 --hack gcc-m32,g++-m32,gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
         ```
-        
-        If it complains about sys/cdefs.h not found, then please `sudo apt-get install -y g++-multilib`. 
-    
+        The first command is to modify a bug of `configure` script.
+
     - android-x64
     
         ```
         sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
         android-gcc-toolchain x64 --hack gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
         ```
-        The first command is to modify a bug of `configure` script, it's unavoidable.
+        The first command is to modify a bug of `configure` script.
         The `--openssl-no-asm` is needed because openssl configure is not ready for android-x64. 
     
 See also: [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
