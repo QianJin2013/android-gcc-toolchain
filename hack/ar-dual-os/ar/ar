@@ -1,22 +1,22 @@
 #!/bin/bash
 EXE_NAME=ar
-function _agcc-msg { echo "[auto-ar]" "$@" >&2; }
+function _agcc-msg { echo "[ar-dual-os]" "$@" >&2; }
 function _agcc-dbg { [[ $AGCC_DBG ]] && _agcc-msg "$@"; }
 
 ###############################################################################
-#Search exe in $PATH, but exclude myself.
-#This is faster than using `which -a $EXE_NAME` then filter
+#Search the exe behind me in $PATH. Faster than using `which -a $EXE_NAME`.
 
-EXE_PATH=""
+IFS=: pathList=($PATH); unset IFS  #split $PATH by :, save to array
 
-#split $PATH by :, save it to pathList as array
-IFS=: pathList=($PATH); unset IFS
-
+EXE_PATH=""; foundMyself=""
 for d in "${pathList[@]}"; do
-    #if exe in the dir and not same as me, then that is the real path i want
-    if [[ -f $d/$EXE_NAME && ! $d/$EXE_NAME -ef "$0" ]]; then
-        EXE_PATH=$d/$EXE_NAME
-        break
+    if [[ -f $d/$EXE_NAME ]]; then
+        if [[ $d/$EXE_NAME -ef "$0" ]]; then #is it actually myself? (symbol link also works)
+            foundMyself=YES
+        elif [[ $foundMyself ]]; then
+            EXE_PATH=$d/$EXE_NAME
+            break
+        fi
     fi
 done
 

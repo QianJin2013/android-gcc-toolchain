@@ -45,8 +45,7 @@ Toolchain options: specify which toolchain to use or create
                 {arm(default)|arm64|x86|x86_64|mips|mips64} or aliases:
                 i386,ia32(=x86), x64(=x86_64), mipsel, mipsel64
  [--api]  APIL  Android API level:
-                {min(default)|max|an integer} or aliases:
-                0(=min), 99(=max)
+                {min(default)|max|an integer}
  [--stl]  STL   C++ STL to use:
                 {gnustl(default)|libc++|stlport}
  --force        Delete existing toolchain dir then create
@@ -61,10 +60,9 @@ Command Mode: Specify whether set $PATH or $CC... or $CC_target...
                 e.g. export CC_target=".../std-toolchains/.../bin/gcc"
 
 Hack options:
- --hack  HACK   To correctly handle ar, ld -lrt etc. Should be combination of
-                ar-dual-os,fake-librt,gcc-m32,g++-m32,gcc-lpthread,g++-lpthread,
-                joined by comma or space.
-                Available options depends on what's inside hack-<OS> dir.
+ --hack  HACK   Hack host(local) compiler commands. Should be combination of
+                available options(use --help-hack to show), joined by comma.
+                For detail, refer to "About Hack mode" section.
 
 Special options:
  -              Means the end of options and next arg is CMD. But if nothing 
@@ -136,15 +134,15 @@ When want run commands(such as gcc), just prepend above command to your command.
     you can use `<<EOF`[Here Document](http://tldp.org/LDP/abs/html/here-docs.html) or 
     `<<<"..."`[Here String(bash only)](http://tldp.org/LDP/abs/html/x17837.html)
     or `bash -c` to feed commands to the shell, or you call this tool multiple times.
-    With options `arm64 -c` as example:
+    With options `arm64`,`-C` as example:
     
     ```
-    $ android-gcc-toolchain arm64 -c <<EOF
+    $ android-gcc-toolchain arm64 -C <<EOF
     CMD1 ARGS... && CMD2 ARGS...
     EOF
-    $ android-gcc-toolchain arm64 -c <<< "CMD1 ARGS... && CMD2 ARGS..." 
-    $ android-gcc-toolchain arm64 -c bash -c <<< "CMD1 ARGS... && CMD2 ARGS..." 
-    $ android-gcc-toolchain arm64 -c CMD1 ARGS && android-gcc-toolchain arm64 -c CMD2 ARGS..." 
+    $ android-gcc-toolchain arm64 -C <<< "CMD1 ARGS... && CMD2 ARGS..." 
+    $ android-gcc-toolchain arm64 -C sh -c "CMD1 ARGS... && CMD2 ARGS..." 
+    $ android-gcc-toolchain arm64 -C CMD1 ARGS && android-gcc-toolchain arm64 -c CMD2 ARGS..." 
     ```
     
     *bash-only: you can use \EOF to disable pathname and var expansion*
@@ -216,8 +214,9 @@ When want run commands(such as gcc), just prepend above command to your command.
     `--arch`,`--api`, `--stl`,`--force`.
     
 6. **(TODO) Miscellaneous**
+    - (TODO): Use symbol/hard link to speed up creation of toolchain and save disk space.
+    - (TODO): Support cc cache.
     - (TODO): Create a docker container for this tool. 
-    - (TODO): Use symbol/hard link to speed up creation of toolchain and save disk space. 
     - (TODO): Auto detect NDK, auto download NDK optionally. 
     - (TODO): Support brew install. 
 
@@ -241,9 +240,9 @@ Following vars will be set for specified Command Mode, **otherwise cleared**.
 
 BIN AGCC_BIN AGCC_HACK_DIR will be set for cleaner and as mnemonics.
 
-`PATH` and `LIBRARY_PATH` will be changed under certain conditions described above.
+`PATH` will be changed under certain conditions described above.
 
-When called recursively, it will try to restore `PATH` `LIBRARY_PATH` first.
+When called recursively, it will try to restore `PATH` first.
 
 ### About redirect mode
 
@@ -261,39 +260,29 @@ but not the first choice if there are already same commands in $PATH.
 
 ###About Hack mode
  
-It solves some common cross-compile problems on Mac:
+It solves some common cross-compile problems on Mac or Linux:
 
-- **ar**: Some projects does not honor `$AR_target` when make Android-side static
+- [Mac] **ar**: Some projects does not honor `$AR_target` when make Android-side static
  lib(*.a). Instead, they call Mac-side ar command, so cause wrong result.
  
     `--hack ar-dual-os` prepend hack dir to `$PATH` so its ar will be called first.
     **It detect input \*.o file format, Mac or Android, then call correct one.**
  
-- **librt**: Some projects use link option `-lrt` (librt) comes from linux, but
+- [Mac] **librt**: Some projects use link option `-lrt` (librt) comes from linux, but
  Mac have no librt, so cause "library not found for -lrt".
  
-    `--hack fake-librt` append hack dir to `$LIBRARY_PATH`, so **it can be linked.**
-    The fake librt does not export any symbol, it is just a reference to the most
-    commonly linked lib: `/usr/lib/libSystem.B.dylib`
+    `--hack gcc-no-lrt` supersede gcc/g++/cc/c++ in $PATH, remove -lrt option.
  
-- **m32**: On 64bit OS, some projects added `-m32` option to gcc to produce
+- [Mac/Linux] **m32**: On 64bit OS, some projects added `-m32` option to gcc to produce
  32bit codes, but some forgot, cause link error of mixing 64 and 32bit codes.
  
-    `--hack gcc-m32` prepend hack dir to `$PATH` so its gcc will be called first.
-    **It forcibly add -m32 option then call original gcc.**
-    
-    `--hack g++-m32` is similar to gcc-m32.
+    `--hack gcc-m32` supersede gcc/g++/cc/c++ in $PATH, add -m32 option.
 
-It solves some common cross-compile problems on Linux:
-
-- **lpthread**: Some projects forgot to add this option so cause linker error:
+- [Linux] **libpthread**: Some projects forgot to add this option so cause linker error:
  `...libpthread.so.0: error adding symbols: DSO missing from command line`.
 
-    `--hack gcc-lpthread` prepend hack dir to `$PATH` so its gcc will be called first."
-    **It forcibly add -lpthread option then call original gcc when found any -l
-    option which means linking to some lib.**
-
-    `--hack g++-lpthread` is similar to gcc-lpthread.
+    `--hack gcc-lpthread` supersede gcc/g++/cc/c++ in $PATH, add -lpthread
+    (only when found any -l option which means linking to some lib).
 
 ----
 
@@ -316,26 +305,26 @@ To perfectly build without losing any functionality, you can:
     - android-arm
     
         ```
-        android-gcc-toolchain arm --hack ar-dual-os,fake-librt,gcc-m32,g++-m32 -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
+        android-gcc-toolchain arm --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
         ```
-            
+    
     - android-arm64
     
         ```
-        android-gcc-toolchain arm64 --hack ar-dual-os,fake-librt -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
+        android-gcc-toolchain arm64 --hack ar-dual-os,gcc-no-lrt -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
         ```
     
     - android-x86
     
         ```
-        android-gcc-toolchain x86 --hack ar-dual-os,fake-librt,gcc-m32,g++-m32 -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
+        android-gcc-toolchain x86 --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
         ```
-            
+    
     - android-x64
     
         ```
         sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
-        android-gcc-toolchain x64 --hack ar-dual-os,fake-librt -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
+        android-gcc-toolchain x64 --hack ar-dual-os,gcc-no-lrt -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
         ```
         The first command is to modify a bug of `configure` script, it's unavoidable.
         The `--openssl-no-asm` is needed because openssl configure is not ready for android-x64. 
@@ -345,13 +334,13 @@ To perfectly build without losing any functionality, you can:
     - android-arm
     
         ```
-        android-gcc-toolchain arm --hack gcc-m32,g++-m32,gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
+        android-gcc-toolchain arm --hack gcc-m32,gcc-lpthread -C <<< "./configure --dest-cpu=arm --dest-os=android && make"
         ```
 
     - android-arm64
     
         ```
-        android-gcc-toolchain arm64 --hack gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
+        android-gcc-toolchain arm64 --hack gcc-lpthread -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
         ```
 
     - android-x86
@@ -359,18 +348,18 @@ To perfectly build without losing any functionality, you can:
         You'd better run `sudo apt-get install -y g++-multilib` first to include some 32bit lib and include files.
         
         ```
-        android-gcc-toolchain x86 --hack gcc-m32,g++-m32,gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
+        sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
+        android-gcc-toolchain x86 --hack gcc-m32,gcc-lpthread -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
         ```
-        
-        If it complains about sys/cdefs.h not found, then please `sudo apt-get install -y g++-multilib`. 
-    
+        The first command is to modify a bug of `configure` script.
+
     - android-x64
     
         ```
         sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
-        android-gcc-toolchain x64 --hack gcc-lpthread,g++-lpthread -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
+        android-gcc-toolchain x64 --hack gcc-lpthread -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
         ```
-        The first command is to modify a bug of `configure` script, it's unavoidable.
+        The first command is to modify a bug of `configure` script.
         The `--openssl-no-asm` is needed because openssl configure is not ready for android-x64. 
     
 See also: [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
