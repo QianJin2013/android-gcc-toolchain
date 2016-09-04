@@ -14,7 +14,9 @@ As an example, see
 
 ### Prerequisite
 
-Install Android NDK and set env var `NDK` to the dir. `export NDK=__the_top_dir_of_installed_NDK__`
+Install Android NDK and set env var `NDK` to the dir: `export NDK=__the_top_dir_of_installed_NDK__`
+(otherwise, it will guess from `ANDROID_NDK_ROOT` `ANDROID_NDK_HOME` `NDK_ROOT` `NDKROOT` `ANDROID_NDK` `ANDROID_SDK_HOME`
+ `ANDROID_SDK_ROOT` `ANDROID_SDK` `ANDROID_HOME` `ANDROID_ROOT`)
 
 ### Install
 
