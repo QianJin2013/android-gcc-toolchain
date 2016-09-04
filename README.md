@@ -319,6 +319,7 @@ To perfectly build without losing any functionality, you can:
     - android-x86
     
         ```
+        sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
         android-gcc-toolchain x86 --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
         ```
     

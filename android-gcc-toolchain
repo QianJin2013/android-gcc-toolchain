@@ -3,6 +3,10 @@ function _agcc-msg { echo "$@" >&2; }
 function _agcc-dbg { [[ $AGCC_DBG ]] && echo "$@" >&2; }
 function _agcc-guide { echo "" "$@" >&2; }
 
+thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
+_agcc-dbg "thisDir: \"$thisDir\""
+hackDir=$thisDir/hack
+
 [[ ! $NDK ]] && for d in "$ANDROID_NDK_ROOT" "$ANDROID_NDK_HOME" "$NDK_ROOT" "$NDKROOT" "$ANDROID_NDK"; do
     [[ $d ]] && export NDK=$d && break
 done
@@ -10,7 +14,10 @@ done
     [[ $d ]] && export NDK=$d/ndk-bundle && break
 done
 
-ARCH=""; APIL=""; STL=""; FORCE="" CMD_MODE=""; CMD=""; HACK=""; HACK_LIST=()
+
+
+
+ARCH=""; APIL=""; STL=""; FORCE="" CMD_MODE=""; CMD=""; HACK=""; HACK_LIST=(); VERBOSE=""; COPY=""
 
 while [[ $# -gt 0 ]]; do
     _agcc-dbg "\"$1\""
@@ -39,6 +46,12 @@ while [[ $# -gt 0 ]]; do
     --force)
             FORCE=$1; _agcc-dbg " ->FORCE"
             ;;
+    -v|--verbose)
+            VERBOSE=--verbose; _agcc-dbg " ->VERBOSE"
+            ;;
+    --copy)
+            COPY=$1; _agcc-dbg " ->COPY"
+            ;;
     arm|arm64|x86|x86_64|mips|mips64|i386|ia32|x64|mipsel|mipsel64)
             ARCH=$1; _agcc-dbg " ->ARCH"
             ;;
@@ -64,11 +77,11 @@ while [[ $# -gt 0 ]]; do
             break
             ;;
     --*)
-            _agcc-msg "invalid option \"$1\", must be --arch|--api|--stl|--force|--hack"
+            _agcc-msg "invalid option \"$1\", must be --arch|--api|--stl|--force|--verbose|--copy|--hack"
             exit 1
             ;;
     -*)
-            _agcc-msg "invalid command mode \"$1\", must be -c|-C"
+            _agcc-msg "invalid short option \"$1\", must be -c(set \$CC...) or -C(set \$CC_target...), or -v(verbose)"
             exit 1
             ;;
     "")
@@ -104,6 +117,9 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg " [--stl]  STL   C++ STL to use:"
         _agcc-msg "                {gnustl(default)|libc++|stlport}"
         _agcc-msg " --force        Delete existing toolchain dir then create"
+        _agcc-msg " -v|--verbose   Show verbose information"
+        _agcc-msg " --copy         Force copy files instead of create hard link of files when"
+        _agcc-msg "                create toolchain first time"
         _agcc-msg ""
         _agcc-msg "Command Mode: Specify whether set \$PATH or \$CC... or \$CC_target..."
         _agcc-msg " omitted        This is the redirect mode."
@@ -212,9 +228,6 @@ if [[ ! $CMD && $1 == --help* ]]; then
     elif [[ $1 == --help-hack ]]; then
     
         _agcc-msg "Available hack options:"
-        thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
-        _agcc-dbg "thisDir: \"$thisDir\""
-        hackDir=$thisDir/hack
         for d1 in "$hackDir"/*; do
             [[ $d1 == *\** ]] && break
             msg=""
@@ -242,6 +255,8 @@ if [[ $AGCC_DBG ]]; then
     _agcc-dbg " APIL     \"$APIL\""
     _agcc-dbg " STL      \"$STL\""
     _agcc-dbg " FORCE    \"$FORCE\""
+    _agcc-dbg " VERBOSE  \"$VERBOSE\""
+    _agcc-dbg " COPY     \"$COPY\""
     _agcc-dbg " HACK     \"$HACK\""
     _agcc-dbg " CMD_MODE \"$CMD_MODE\""
     _agcc-dbg " CMD      \"$CMD\""
@@ -315,9 +330,6 @@ if [[ $HACK ]]; then
     hoList=(${HACK//,/ }) #replace comma with space, then turn to a array
     [[ ! $hoList[0] ]] && { _agcc-msg "\"$HACK\" is not a valid hack option. Should be combination of available options(use --help-hack to show), joined by comma"; exit 1; }
 
-    thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
-    _agcc-dbg "thisDir: \"$thisDir\""
-    hackDir=$thisDir/hack
     function already_checked { local ho; for ho in "${HACK_LIST[@]}"; do [[ $1 == $ho ]] && return 0; done; return 1; }
 
     for ho in "${hoList[@]}"; do
@@ -353,6 +365,8 @@ if [[ $AGCC_DBG ]]; then
     _agcc-dbg " APIL     \"$APIL\""
     _agcc-dbg " STL      \"$STL\""
     _agcc-dbg " FORCE    \"$FORCE\""
+    _agcc-dbg " VERBOSE  \"$VERBOSE\""
+    _agcc-dbg " COPY     \"$COPY\""
     _agcc-dbg " HACK     \"$HACK\""
     qo=(); for o in "${HACK_LIST[@]}"; do qo[${#qo[@]}]=\"$o\"; done
     _agcc-dbg " HACK_LIST    (${qo[@]})"
@@ -381,7 +395,17 @@ if [[ ! -d $DIR || $FORCE ]]; then
         [[ $PYTHON == "$NDK/prebuilt/*/bin/python" ]] && { _agcc-msg "python not found in \$PATH and \$NDK/prebuilt/*/bin"; exit 1; }
     fi
     _agcc-dbg "use \"$PYTHON\""
-    "$PYTHON" "$NDK/build/tools/make_standalone_toolchain.py" --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE
+
+    PY_FILE=$NDK/build/tools/make_standalone_toolchain.py
+    if [[ $COPY ]]; then
+        "$PYTHON" "$PY_FILE" --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
+    else
+        #use hard link as possible. Use customized copy2 and copytree to replace shutil.copy2 and shutil.copytree
+        VERBOSE=$VERBOSE PY_FILE=$PY_FILE "$PYTHON" <(
+            cat "$thisDir/fast-copy/func.py"
+            sed "s/__file__/os.environ['PY_FILE']/g;s/shutil\.copy2/copy2/g;s/shutil\.copytree/copytree/g" "$PY_FILE"
+        ) --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
+    fi
 
     if [[ -e "$BIN/$ARCH_PREFIX"gcc ]]; then
         _agcc-msg "Done"
@@ -424,10 +448,10 @@ fi
 
 
 ################################################################################
-#check interactive bash just for show guide and prompt
-GUIDE=""
-[[ ! $CMD && -t 0 && -t 2 ]] && GUIDE=YES
-_agcc-dbg "GUIDE: ${GUIDE:-NO}"
+#check verbose mode or interactive bash just for show guide and prompt
+INTER_BASH=""; [[ ! $CMD && -t 0 && -t 2 ]] && INTER_BASH=YES
+GUIDE=""; [[ $VERBOSE || $INTER_BASH ]] && GUIDE=YES
+_agcc-dbg "GUIDE: ${GUIDE:-NO} INTER_BASH: ${INTER_BASH:-NO}"
 
 ################################################################################
 #remove previous bin path from $PATH
@@ -531,7 +555,7 @@ case $CMD_MODE in
         _agcc-guide ""
 
         #change prompt
-        export PS1="[$NAME] ";
+        PS1="[$NAME] ";
     fi
     ;;
 ################################################################################
@@ -560,7 +584,7 @@ case $CMD_MODE in
         _agcc-guide ""
 
         #change prompt
-        export PS1="[$NAME \\\$CC] ";
+        PS1="[$NAME \\\$CC] ";
     fi
     ;;
 ################################################################################
@@ -589,7 +613,7 @@ case $CMD_MODE in
         _agcc-guide ""
 
         #change prompt
-        export PS1="[$NAME \\\$CC_target] "
+        PS1="[$NAME \\\$CC_target] "
     fi
 
     ################################################################################
@@ -609,14 +633,14 @@ case $CMD_MODE in
         [[ $GUIDE ]] && _agcc-guide ""
 
         #change prompt, replace "]" with "+]"
-        [[ $GUIDE ]] && export PS1="${PS1/#]/+]}"
+        [[ $GUIDE ]] && PS1="${PS1/#]/+]}"
     fi #end of HACK_LIST
 esac
 
 ################################################################################
 #finally, call CMD
 
-if [[ $GUIDE ]]; then
+if [[ $INTER_BASH ]]; then
     #forcibly set my prompt ($PS1) via an on-fly init-file yet simulate interactive non-login bash
     exec /bin/bash --init-file <(
         echo '[[ -f /etc/bash.bashrc ]] && source /etc/bash.bashrc'
