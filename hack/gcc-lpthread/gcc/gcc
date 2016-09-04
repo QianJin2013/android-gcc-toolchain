@@ -1,34 +1,38 @@
 #!/bin/bash
-EXE_NAME=g++
+EXE_NAME=${0##*/}
 function _agcc-msg { echo "[$EXE_NAME-lpthread]" "$@" >&2; }
 function _agcc-dbg { [[ $AGCC_DBG ]] && _agcc-msg "$@"; }
 
 ###############################################################################
-#Search exe in $PATH, but exclude myself.
-#This is faster than using `which -a $EXE_NAME` then filter
+#Search the exe behind me in $PATH. Faster than using `which -a $EXE_NAME`.
 
-EXE_PATH=""
+case $EXE_NAME in
+cc) ALT_EXE_NAME="gcc";;
+gcc) ALT_EXE_NAME="cc";;
+c++) ALT_EXE_NAME="g++";;
+g++) ALT_EXE_NAME="c++";;
+*) unset ALT_EXE_NAME;;
+esac
 
-#split $PATH by :, save it to pathList as array
-IFS=: pathList=($PATH); unset IFS
+IFS=: pathList=($PATH); unset IFS  #split $PATH by :, save to array
 
-foundMyself=""
-for d in "${pathList[@]}"; do
-    #if exe in the dir and not same as me, then that is the real path i want
-    if [[ -f $d/$EXE_NAME ]]; then
-        if [[ $d/$EXE_NAME -ef "$0" ]]; then
-            foundMyself=YES
-        else
-            if [[ $foundMyself ]]; then
-                EXE_PATH=$d/$EXE_NAME
+for name in $EXE_NAME $ALT_EXE_NAME; do
+    EXE_PATH=""; foundMyself=""
+    for d in "${pathList[@]}"; do
+        if [[ -f $d/$name ]]; then
+            if [[ $d/$name -ef "$0" ]]; then #is it actually myself? (symbol link also works)
+                foundMyself=YES
+            elif [[ $foundMyself ]]; then
+                EXE_PATH=$d/$name
                 break
             fi
         fi
-    fi
+    done
+    [[ $EXE_PATH ]] && break;
 done
 
 if [[ ! $EXE_PATH ]]; then
-    _agcc-msg "$EXE_NAME not found."
+    _agcc-msg "$EXE_NAME${ALT_EXE_NAME+ or }$ALT_EXE_NAME not found."
     exit 1
 fi
 
