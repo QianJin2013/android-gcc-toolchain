@@ -220,9 +220,13 @@ When want run commands(such as gcc), just prepend above command to your command.
     This is done by modify original $NDK/build/tools/make_standalone_toolchain.py on-the-fly 
     (replace shutil.copy2 and shutil.copytree with customized copy2 and copytree which use hard link)
 
-8. **(TODO) Miscellaneous**
+8. **Support cc cache.**
+
+    Specify `--ccache` option will use ccache gcc ... to compile.
+    This option cooperate with all command mode(redirection mode or -c($CC...) or -C($CC_target...)).
+
+9. **(TODO) Miscellaneous**
     - (TODO): Create a docker container for this tool. 
-    - (TODO): Support cc cache.
     - (TODO): Support brew install. 
 
 ### About where the toolchain created
