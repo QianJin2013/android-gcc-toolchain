@@ -51,6 +51,9 @@ Toolchain options: specify which toolchain to use or create
  [--stl]  STL   C++ STL to use:
                 {gnustl(default)|libc++|stlport}
  --force        Delete existing toolchain dir then create
+ -v|--verbose   Show verbose information
+ --copy         Force copy files instead of create hard link of files when
+                create toolchain first time
 
 Command Mode: Specify whether set $PATH or $CC... or $CC_target...
  omitted        This is the redirect mode.
@@ -61,8 +64,12 @@ Command Mode: Specify whether set $PATH or $CC... or $CC_target...
  -C             Set $CC_target,$CXX_target,$AR_target... ...$LINK_target
                 e.g. export CC_target=".../std-toolchains/.../bin/gcc"
 
+Compiler options:
+ --ccache       Use ccache to wrapper gcc... or $CC... or $CC_target... to
+                speed up compilation
+
 Hack options:
- --hack  HACK   Hack host(local) compiler commands. Should be combination of
+ --hack  HACK   Hack host(local) compiler commands. Must be combination of
                 available options(use --help-hack to show), joined by comma.
                 For detail, refer to "About Hack mode" section.
 
