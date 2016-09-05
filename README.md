@@ -14,9 +14,10 @@ As an example, see
 
 ### Prerequisite
 
-Install Android NDK and set env var `NDK` to the dir: `export NDK=__the_top_dir_of_installed_NDK__`
-(otherwise, it will guess from `ANDROID_NDK_ROOT` `ANDROID_NDK_HOME` `NDK_ROOT` `NDKROOT` `ANDROID_NDK` `ANDROID_SDK_HOME`
- `ANDROID_SDK_ROOT` `ANDROID_SDK` `ANDROID_HOME` `ANDROID_ROOT`)
+Install Android NDK and set env var `NDK` to the dir: `export NDK=__the_top_dir_of_installed_NDK__`.
+
+Otherwise, it will guess NDK dir from env vars: ANDROID_NDK_ROOT ANDROID_NDK_HOME NDK_ROOT NDKROOT ANDROID_NDK ANDROID_SDK_HOME
+ ANDROID_SDK_ROOT ANDROID_SDK ANDROID_HOME ANDROID_ROOT.
 
 ### Install
 
@@ -40,7 +41,7 @@ Use or create toolchain, set env and run command, or print "the bin dir/".
 ```
 android-gcc-toolchain [OPTIONS] [CMD [ARGS...]]
 --------------------------------------------------------------------------------
-OPTIONS: Toolchain options, Command Mode, Misc options
+OPTIONS: Toolchain options, Env Mode, Misc options
 
 Toolchain options: specify which toolchain to use or create
  [--arch] ARCH  Android architecture:
@@ -55,8 +56,8 @@ Toolchain options: specify which toolchain to use or create
  --copy         Force copy files instead of create hard link of files when
                 create toolchain first time
 
-Command Mode: Specify whether set $PATH or $CC... or $CC_target...
- omitted        This is the redirect mode.
+Env Mode: Specify whether set $PATH or $CC... or $CC_target...
+ omitted        This is the Redirect Mode.
                 Set $PATH to redirect gcc... to the toolchain's gcc...
                 e.g. export PATH=".../std-toolchains/.../bin:$PATH"
  -c             Set $CC,$CXX,$LD,$AR,$AS,$RANLIB,$STRIP,$NM,$LINK
@@ -65,12 +66,14 @@ Command Mode: Specify whether set $PATH or $CC... or $CC_target...
                 e.g. export CC_target=".../std-toolchains/.../bin/gcc"
 
 Compiler options:
- --ccache       Use ccache to wrapper gcc... or $CC... or $CC_target... to
-                speed up compilation
+ --ccache       Speed up compilation by CCACHE. This will wrap android gcc...
+                or $CC... or $CC_target... with ccache. When in -c or -C mode,
+                this implies appending a host-side hack option "ccache".
 
 Hack options:
  --hack  HACK   Hack host(local) compiler commands. Must be combination of
                 available options(use --help-hack to show), joined by comma.
+                This option only works for -c or -C option.
                 For detail, refer to "About Hack mode" section.
 
 Special options:
@@ -210,27 +213,39 @@ When want run commands(such as gcc), just prepend above command to your command.
     By default, get minimum API level from NDK for specified arch smartly, 
     from actual folder names `$NDK/platforms/android-*/arch-$ARCH`, instead of a fixed 21.
     
-    As described in [options](#options), you can pass `max`,`99` or verbose `--api max` to get maximum API level.
+    As described in [options](#options), you can pass `max` or verbose `--api max` to get maximum API level.
     
     ```
     $ android-gcc-toolchain arm64 max
+      ...
       android-24-arm64 toolchain is ready! ...
     ```
 
 6. **Automatically create standalone toolchain the first time.**
 
     As described in [options](#options), options are compatible with $NDK/build/tools/make_standalone_toolchain.py:
-    `--arch`,`--api`, `--stl`,`--force`.
+    `--arch`,`--api`, `--stl`,`--force`,`--verbose`.
     
 7. **Use hard links to speed up creation of toolchain and save disk space.**
 
-    This is done by modify original $NDK/build/tools/make_standalone_toolchain.py on-the-fly 
-    (replace shutil.copy2 and shutil.copytree with customized copy2 and copytree which use hard link)
+    By default, this tool run a modified py file on-the-fly instead of original $NDK/build/tools/make_standalone_toolchain.py. 
+    The modified py file replace shutil.copy2 and shutil.copytree with customized copy2 and copytree which use hard link.
+    
+    You can specify `--copy` to force use traditional copy mode. 
 
-8. **Support cc cache.**
+8. **Support ccache to speed up repeat compilation.**
 
-    Specify `--ccache` option will use ccache gcc ... to compile.
-    This option cooperate with all command mode(redirection mode or -c($CC...) or -C($CC_target...)).
+    Specify `--ccache` option will use `ccache gcc ...` to compile.
+    This option cooperate with Redirection Mode or Env Mode -c($CC...) or -C($CC_target...).
+    When -c or -C, it implicitly add a hack option `ccache` to supersede all host-side compiler commands with a ccache wrapper.
+    
+    First you need install `ccache` by `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux. then:
+    
+    ```
+    export USE_CCACHE=1             #you'd better put this line to your ~/.bash_profile etc.
+    export CCACHE_DIR=~/ccache      #you'd better put this line to your ~/.bash_profile etc.
+    ccache -M 50G                   #set cache size once is ok
+    ```
 
 9. **(TODO) Miscellaneous**
     - (TODO): Create a docker container for this tool. 
@@ -243,26 +258,27 @@ This tool create dir in your NDK dir, in following format:
 
 This is not only for easy management, but also for keep some commands work. 
 e.g. `ndk-gdb`, `ndk-which`... call neighbour files from `\$NDK/SOME_DIR` level.
-When in redirect mode, such command is called into the toolchain's one.
+When in Redirect Mode, such command is called into the toolchain's one.
 To keep them works same as previous, i have to choose such a dir hierarchy.
 
 After you upgrade your NDK, you need specify `--force` option to recreate toolchains. 
 
 ### About env vars passed to CMD
 
-As described in [options](#options),
-Following vars will be set for specified Command Mode, **otherwise cleared**.
-- GYP_DEFINES CC CXX LD AR AS RANLIB STRIP NM LINK CC_target CXX_target LD_target AR_target AS_target RANLIB_target STRIP_target NM_target LINK_target
+- `PATH`: will be changed under certain conditions(redirect or hack). 
+  When called recursively, it will be restored first
 
-BIN AGCC_BIN AGCC_HACK_DIR will be set for cleaner and as mnemonics.
+- GYP_DEFINES: will be set to "host_os=<mac|linux>" to specify host_os for gyp.
 
-`PATH` will be changed under certain conditions described above.
+- BIN AGCC_BIN AGCC_HACK_DIR: will be set for cleaner and as mnemonics.
 
-When called recursively, it will try to restore `PATH` first.
+- Following vars will be set for specified Env Mode, otherwise cleared:
+ - CC CXX LD AR AS RANLIB STRIP NM LINK CC_target CXX_target
+ - LD_target AR_target AS_target RANLIB_target STRIP_target NM_target LINK_target
 
 ### About redirect mode
 
-Without `-c` nor `-C` option, the specified command will run in a `redirect mode`.
+Without `-c` nor `-C` option, the specified command will run in a `Redirect Mode`.
 In this mode, the following commands are redirected to the toolchain's one.
 - cc(->gcc) gcc g++ c++ cpp clang clang++ yasm ld ar as ranlib strip ...
 - readelf objdump nm c++filt elfedit objcopy strings size ...
@@ -380,5 +396,15 @@ To perfectly build without losing any functionality, you can:
         The `--openssl-no-asm` is needed because openssl configure is not ready for android-x64. 
     
 See also: [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
+
+**To compile repeatedly and quickly, you'd better add `--ccache` option for `android-gcc-toolchain`**
+
+First you need install `ccache` by `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux. then:
+
+```
+export USE_CCACHE=1             #you'd better put this line to your ~/.bash_profile etc.
+export CCACHE_DIR=~/ccache      #you'd better put this line to your ~/.bash_profile etc.
+ccache -M 50G                   #set cache size once is ok
+```
 
 Good luck.
