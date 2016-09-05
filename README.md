@@ -198,7 +198,7 @@ When want run commands(such as gcc), just prepend above command to your command.
         You can use [Hack Mode](#about-hack-mode) to overcome them easily, 
         otherwise you have to find and modify the wrong settings each time.
 
-4. **Automatically get minimum/maximum `Android API level` from NDK.**
+5. **Automatically get minimum/maximum `Android API level` from NDK.**
 
     By default, get minimum API level from NDK for specified arch smartly, 
     from actual folder names `$NDK/platforms/android-*/arch-$ARCH`, instead of a fixed 21.
@@ -210,16 +210,19 @@ When want run commands(such as gcc), just prepend above command to your command.
       android-24-arm64 toolchain is ready! ...
     ```
 
-5. **Automatically create standalone toolchain the first time.**
+6. **Automatically create standalone toolchain the first time.**
 
     As described in [options](#options), options are compatible with $NDK/build/tools/make_standalone_toolchain.py:
     `--arch`,`--api`, `--stl`,`--force`.
     
-6. **(TODO) Miscellaneous**
-    - (TODO): Use symbol/hard link to speed up creation of toolchain and save disk space.
-    - (TODO): Support cc cache.
+7. **Use hard links to speed up creation of toolchain and save disk space.**
+
+    This is done by modify original $NDK/build/tools/make_standalone_toolchain.py on-the-fly 
+    (replace shutil.copy2 and shutil.copytree with customized copy2 and copytree which use hard link)
+
+8. **(TODO) Miscellaneous**
     - (TODO): Create a docker container for this tool. 
-    - (TODO): Auto detect NDK, auto download NDK optionally. 
+    - (TODO): Support cc cache.
     - (TODO): Support brew install. 
 
 ### About where the toolchain created
