@@ -14,7 +14,7 @@ done
     [[ $d ]] && export NDK=$d/ndk-bundle && break
 done
 
-ARCH=""; APIL=""; STL=""; FORCE="" CMD_MODE=""; CMD=""; HACK=""; HACK_LIST=(); VERBOSE=""; COPY=""; CCACHE=""
+ARCH=""; APIL=""; STL=""; FORCE="" ENV_MODE=""; CMD=""; HACK=""; HACK_LIST=(); VERBOSE=""; COPY=""; CCACHE=""
 
 while [[ $# -gt 0 ]]; do
     _agcc-dbg "\"$1\""
@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
             STL=$1; _agcc-dbg " ->STL"
             ;;
     -c|-C)
-            CMD_MODE=$1; _agcc-dbg " ->CMD_MODE"
+            ENV_MODE=$1; _agcc-dbg " ->ENV_MODE"
             ;;
     -|--)
             _agcc-dbg " :end of options, next is CMD"
@@ -106,7 +106,7 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg "Use or create toolchain, set env and run command, or print \"the bin dir/\"."
         _agcc-msg "${0##*/} [OPTIONS] [CMD [ARGS...]]"
         _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "OPTIONS: Toolchain options, Command Mode, Misc options"
+        _agcc-msg "OPTIONS: Toolchain options, Env Mode, Misc options"
         _agcc-msg ""
         _agcc-msg "Toolchain options: specify which toolchain to use or create"
         _agcc-msg " [--arch] ARCH  Android architecture:"
@@ -121,7 +121,7 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg " --copy         Force copy files instead of create hard link of files when"
         _agcc-msg "                create toolchain first time"
         _agcc-msg ""
-        _agcc-msg "Command Mode: Specify whether set \$PATH or \$CC... or \$CC_target..."
+        _agcc-msg "Env Mode: Specify whether set \$PATH or \$CC... or \$CC_target..."
         _agcc-msg " omitted        This is the redirect mode."
         _agcc-msg "                Set \$PATH to redirect gcc... to the toolchain's gcc..."
         _agcc-msg "                e.g. export PATH=\".../std-toolchains/.../bin:\$PATH\""
@@ -131,12 +131,14 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg "                e.g. export CC_target=\".../std-toolchains/.../bin/gcc\""
         _agcc-msg ""
         _agcc-msg "Compiler options:"
-        _agcc-msg " --ccache       Use ccache to wrapper gcc... or \$CC... or \$CC_target... to"
-        _agcc-msg "                speed up compilation"
+        _agcc-msg " --ccache       Speed up compilation by CCACHE. This will wrap android gcc..."
+        _agcc-msg "                or \$CC... or \$CC_target... with ccache. When in -c or -C mode,"
+        _agcc-msg "                this implies appending a host-side hack option \"ccache\"."
         _agcc-msg ""
         _agcc-msg "Hack options:"
         _agcc-msg " --hack  HACK   Hack host(local) compiler commands. Must be combination of"
         _agcc-msg "                available options(use --help-hack to show), joined by comma."
+        _agcc-msg "                This option only works for -c or -C option."
         _agcc-msg "                For detail, refer to \"About Hack mode\" section."
         _agcc-msg ""
         _agcc-msg "Special options:"
@@ -170,15 +172,15 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg "--------------------------------------------------------------------------------"
         _agcc-msg "About env vars passed to CMD"
         _agcc-msg ""
+        _agcc-msg "PATH will be changed under certain conditions(redirect or hack)."
+        _agcc-msg ""
         _agcc-msg "GYP_DEFINES will be set to \"host_os=<mac|linux>\" to specify host_os for gyp."
         _agcc-msg ""
-        _agcc-msg "Following vars will be set for specified Command Mode, otherwise cleared."
+        _agcc-msg "Following vars will be set for specified Env Mode, otherwise cleared."
         _agcc-msg " CC CXX LD AR AS RANLIB STRIP NM LINK CC_target CXX_target"
         _agcc-msg " LD_target AR_target AS_target RANLIB_target STRIP_target NM_target LINK_target"
         _agcc-msg ""
         _agcc-msg "BIN AGCC_BIN AGCC_HACK_DIR will be set for cleaner and as mnemonics."
-        _agcc-msg ""
-        _agcc-msg "PATH will be changed under certain conditions(redirect or hack)."
         _agcc-msg ""
         _agcc-msg "When called recursively, it will try to restore PATH first."
         _agcc-msg "--------------------------------------------------------------------------------"
@@ -194,7 +196,7 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg "In this mode, the following commands come from toolchain are also available:"
         _agcc-msg " python make awk... But not the first choice in \$PATH"
         _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "About Hack mode (--hack)"
+        _agcc-msg "About Hack mode (--hack, with -c or -C)"
         _agcc-msg ""
         "$0" --help-hack
         _agcc-msg "--------------------------------------------------------------------------------"
@@ -261,8 +263,9 @@ if [[ $AGCC_DBG ]]; then
     _agcc-dbg " FORCE    \"$FORCE\""
     _agcc-dbg " VERBOSE  \"$VERBOSE\""
     _agcc-dbg " COPY     \"$COPY\""
+    _agcc-dbg " CCACHE   \"$CCACHE\""
     _agcc-dbg " HACK     \"$HACK\""
-    _agcc-dbg " CMD_MODE \"$CMD_MODE\""
+    _agcc-dbg " ENV_MODE \"$ENV_MODE\""
     _agcc-dbg " CMD      \"$CMD\""
     _agcc-dbg " #ARGS    $#"
     _agcc-dbg "}"
@@ -325,25 +328,28 @@ esac
 ################################################################################
 #check HACK mode if to run command
 
-if [[ $HACK ]]; then
+if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
 
-    #ugly: treat -C anywhere as CMD_MODE -C, so avoid following incredible validation error
-    [[ ! $CMD_MODE ]] && for arg in "$@"; do [[ $arg == -C ]] && CMD_MODE=-C && break; done
-    [[ $CMD_MODE != -C ]] && { _agcc-msg "--host option must be used with -C option"; exit 1; }
+    #ugly: treat -C anywhere as ENV_MODE -C, so avoid following incredible validation error
+    [[ ! $ENV_MODE ]] && for arg in "$@"; do [[ $arg == -c || $arg == -C ]] && ENV_MODE=$arg && break; done
+    [[ ! $ENV_MODE ]] && { _agcc-msg "--host option must be used with -c or -C option"; exit 1; }
 
     hoList=(${HACK//,/ }) #replace comma with space, then turn to a array
     [[ ! $hoList[0] ]] && { _agcc-msg "invalid hack options \"$HACK\". Use --help-hack to show available options"; exit 1; }
 
     function already_checked { local ho; for ho in "${HACK_LIST[@]}"; do [[ $1 == $ho ]] && return 0; done; return 1; }
 
-    for ho in "${hoList[@]}"; do
-        [[ $ho == /* || $ho == */ || $ho == */*/* || ! -d $hackDir/$ho ]] && { _agcc-msg "invalid hack option \"$ho\". Use --help-hack to show available options"; exit 1; }
+    #append "ccache" to hack option list. [[ $ind == ${#hoList[@]} ]] means is checking the last ccache appended by --ccache option.
+    [[ $CCACHE ]] && ind=-1
+    for ho in "${hoList[@]}" ${CCACHE#--}; do
+        [[ $CCACHE ]] && ((ind++))
+        [[ $ho == /* || $ho == */ || $ho == */*/* || ! -d $hackDir/$ho ]] && { _agcc-msg "invalid hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
 
         if [[ $ho == */* ]]; then #?* means at least 1 char
             dirList=("$hackDir/$ho")
         else
             dirList=("$hackDir/$ho"/*)
-            [[ $dirList[0] == *\** ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; exit 1; }
+            [[ $dirList[0] == *\** ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
         fi
 
         ok=""
@@ -351,26 +357,20 @@ if [[ $HACK ]]; then
             exeName=${d2##*/}  #gcc-no-lrt/gcc -> gcc
             if [[ -x $d2/$exeName ]] || chmod a+x "$d2/$exeName" 2>/dev/null; then
                 ok=YES
-                already_checked "$d2" || HACK_LIST[${#HACK_LIST[@]}]=$d2
+                #when specified --ccache option, ensure ccache/* put to last of hack option list
+                if [[ $CCACHE && $d2 == */ccache/* ]]; then
+                    [[ $ind == ${#hoList[@]} ]] && HACK_LIST[${#HACK_LIST[@]}]=$d2
+                else
+                    already_checked "$d2" || HACK_LIST[${#HACK_LIST[@]}]=$d2
+                fi
             fi
         done
 
-        [[ ! $ok ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; exit 1; }
+        [[ ! $ok ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
     done
 
     #remove hackDir/ from every item
     HACK_LIST=("${HACK_LIST[@]##$hackDir/}")
-fi
-
-################################################################################
-#check others
-if [[ $CCACHE ]]; then
-    which ccache > /dev/null || { _agcc-msg "ccache not found in \$PATH"; exit 1; }
-fi
-
-if [[ $NDK == *\ * ]]; then
-    [[ $CMD == -c ]] && { agcc-msg "warning: \$NDK contains spaces so \$CC... maybe not works due to path split"; exit 1; }
-    [[ $CMD == -C ]] && { agcc-msg "warning: \$NDK contains spaces so \$CC_target... maybe not works due to path split"; exit 1; }
 fi
 
 ################################################################################
@@ -382,10 +382,11 @@ if [[ $AGCC_DBG ]]; then
     _agcc-dbg " FORCE    \"$FORCE\""
     _agcc-dbg " VERBOSE  \"$VERBOSE\""
     _agcc-dbg " COPY     \"$COPY\""
+    _agcc-dbg " CCACHE   \"$CCACHE\""
     _agcc-dbg " HACK     \"$HACK\""
     qo=(); for o in "${HACK_LIST[@]}"; do qo[${#qo[@]}]=\"$o\"; done
-    _agcc-dbg " HACK_LIST    (${qo[@]})"
-    _agcc-dbg " CMD_MODE \"$CMD_MODE\""
+    _agcc-dbg " HACK_LIST(${qo[@]})"
+    _agcc-dbg " ENV_MODE \"$ENV_MODE\""
     _agcc-dbg " CMD      \"$CMD\""
     _agcc-dbg " #ARGS    $#"
     _agcc-dbg "}"
@@ -470,6 +471,18 @@ fi
 
 
 
+
+################################################################################
+#check ccache
+if [[ $CCACHE ]]; then
+    which ccache > /dev/null || { _agcc-msg "ccache not found in \$PATH"; exit 1; }
+fi
+
+#check $NDK
+if [[ $ENV_MODE && $NDK == *\ * ]]; then
+    [[ $ENV_MODE == -c ]] && { agcc-msg "warning: \$NDK contains spaces so \$CC... maybe not works due to path split unexpectedly"; exit 1; }
+    [[ $ENV_MODE == -C ]] && { agcc-msg "warning: \$NDK contains spaces so \$CC_target... maybe not works due to path split unexpectedly"; exit 1; }
+fi
 
 ################################################################################
 #check verbose mode or interactive bash just for show guide and prompt
@@ -579,7 +592,7 @@ esac
 CCACHE_PREFIX=""; Q=""
 [[ $CCACHE ]] && CCACHE_PREFIX="ccache " && Q=\"
 
-case $CMD_MODE in
+case $ENV_MODE in
 ################################################################################
 "")  #$PATH mode(redirect mode)
     export PATH=$BIN:$PATH
