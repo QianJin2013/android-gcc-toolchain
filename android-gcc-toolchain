@@ -14,32 +14,29 @@ done
     [[ $d ]] && export NDK=$d/ndk-bundle && break
 done
 
-
-
-
-ARCH=""; APIL=""; STL=""; FORCE="" CMD_MODE=""; CMD=""; HACK=""; HACK_LIST=(); VERBOSE=""; COPY=""
+ARCH=""; APIL=""; STL=""; FORCE="" CMD_MODE=""; CMD=""; HACK=""; HACK_LIST=(); VERBOSE=""; COPY=""; CCACHE=""
 
 while [[ $# -gt 0 ]]; do
     _agcc-dbg "\"$1\""
     case $1 in
     --arch) case $2 in arm|arm64|x86|x86_64|mips|mips64|i386|ia32|x64|mipsel|mipsel64) ARCH=$2; _agcc-dbg " ARCH=\"$2\""; shift;;
-            ""|-*) _agcc-msg "arch not specified behind $1. It must be arm(default)|arm64|x86|x86_64|mips|mips64 or aliases i386|ia32|x64|mipsel|mipsel64"; exit 1;;
-            *) _agcc-msg "\"$2\" is not a valid arch. It must be arm(default)|arm64|x86|x86_64|mips|mips64 or aliases i386|ia32|x64|mipsel|mipsel64"; exit 1;;
+            ""|-*) _agcc-msg "expect arch behind $1. Must be arm(default)|arm64|x86|x86_64|mips|mips64 or aliases i386|ia32|x64|mipsel|mipsel64"; exit 1;;
+            *) _agcc-msg "invalid arch \"$2\". Must be arm(default)|arm64|x86|x86_64|mips|mips64 or aliases i386|ia32|x64|mipsel|mipsel64"; exit 1;;
             esac
             ;;
     --api)  case $2 in min|max) APIL=$2; _agcc-dbg " APIL=\"$2\""; shift;;
-            ""|-*) _agcc-msg "Android API level not specified behind $1. It must be min(default)|max|an integer"; exit 1;;
-            *[!0-9]*) _agcc-msg "\"$2\" is not a valid Android API level. It must be min(default)|max|an integer"; exit 1;;
+            ""|-*) _agcc-msg "expect Android API level behind $1. Must be min(default)|max|an integer"; exit 1;;
+            *[!0-9]*) _agcc-msg "invalid Android API level \"$2\". Must be min(default)|max|an integer"; exit 1;;
             *) APIL=$2; _agcc-dbg " APIL=\"$2\""; shift;;
             esac
             ;;
     --stl)  case $2 in gnustl|libc++|stlport) STL=$2; _agcc-dbg " STL=\"$2\""; shift;;
-            ""|-*) _agcc-msg "C++ STL not specified behind $1. It must be gnustl(default)|libc++|stlport"; exit 1;;
-            *) _agcc-msg "\"$2\" is not a valid C++ STL. It must be gnustl(default)|libc++|stlport"; exit 1;;
+            ""|-*) _agcc-msg "expect C++ STL behind $1. Must be gnustl(default)|libc++|stlport"; exit 1;;
+            *) _agcc-msg "invalid C++ STL \"$2\". Must be gnustl(default)|libc++|stlport"; exit 1;;
             esac
             ;;
     --hack) case $2 in
-            ""|-*) _agcc-msg "hack options not found behind $1. Should be combination of available options(use --help-hack to show), joined by comma"; exit 1;;
+            ""|-*) _agcc-msg "expect hack options behind $1. Must be combination of available options(use --help-hack to show), joined by comma"; exit 1;;
             *)  HACK=$2; _agcc-dbg " HACK=\"$2\""; shift;;
             esac
             ;;
@@ -51,6 +48,9 @@ while [[ $# -gt 0 ]]; do
             ;;
     --copy)
             COPY=$1; _agcc-dbg " ->COPY"
+            ;;
+    --ccache)
+            CCACHE=$1; _agcc-dbg " ->CCACHE"
             ;;
     arm|arm64|x86|x86_64|mips|mips64|i386|ia32|x64|mipsel|mipsel64)
             ARCH=$1; _agcc-dbg " ->ARCH"
@@ -77,11 +77,11 @@ while [[ $# -gt 0 ]]; do
             break
             ;;
     --*)
-            _agcc-msg "invalid option \"$1\", must be --arch|--api|--stl|--force|--verbose|--copy|--hack"
+            _agcc-msg "invalid option \"$1\". Must be --arch|--api|--stl|--force|--verbose|--copy|--hack"
             exit 1
             ;;
     -*)
-            _agcc-msg "invalid short option \"$1\", must be -c(set \$CC...) or -C(set \$CC_target...), or -v(verbose)"
+            _agcc-msg "invalid short option \"$1\". Must be -c(set \$CC...) or -C(set \$CC_target...), or -v(verbose)"
             exit 1
             ;;
     "")
@@ -130,8 +130,12 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg " -C             Set \$CC_target,\$CXX_target,\$AR_target... ...\$LINK_target"
         _agcc-msg "                e.g. export CC_target=\".../std-toolchains/.../bin/gcc\""
         _agcc-msg ""
+        _agcc-msg "Compiler options:"
+        _agcc-msg " --ccache       Use ccache to wrapper gcc... or \$CC... or \$CC_target... to"
+        _agcc-msg "                speed up compilation"
+        _agcc-msg ""
         _agcc-msg "Hack options:"
-        _agcc-msg " --hack  HACK   Hack host(local) compiler commands. Should be combination of"
+        _agcc-msg " --hack  HACK   Hack host(local) compiler commands. Must be combination of"
         _agcc-msg "                available options(use --help-hack to show), joined by comma."
         _agcc-msg "                For detail, refer to \"About Hack mode\" section."
         _agcc-msg ""
@@ -227,7 +231,7 @@ if [[ ! $CMD && $1 == --help* ]]; then
 
     elif [[ $1 == --help-hack ]]; then
     
-        _agcc-msg "Available hack options:"
+        _agcc-msg "You can combine following hack options (join by comma):"
         for d1 in "$hackDir"/*; do
             [[ $d1 == *\** ]] && break
             msg=""
@@ -273,7 +277,7 @@ case ${ARCH:=arm} in
     x86_64|x64)      ARCH=x86_64; ARCH_PREFIX=x86_64-linux-android- ;;
     mips|mipsel)     ARCH=mips;   ARCH_PREFIX=mipsel-linux-android- ;;
     mips64|mipsel64) ARCH=mips64; ARCH_PREFIX=mips64el-linux-android- ;;
-    *) _agcc-msg "\"$ARCH\" is not a valid arch. It must be arm(default)|arm64|x86|x86_64|mips|mips64 or aliases i386|ia32|x64|mipsel|mipsel64"; exit 1 ;;
+    *) _agcc-msg "invalid arch \"$ARCH\". Must be arm(default)|arm64|x86|x86_64|mips|mips64 or aliases i386|ia32|x64|mipsel|mipsel64"; exit 1 ;;
 esac
 
 ################################################################################
@@ -305,7 +309,7 @@ case ${APIL:=min} in
         [[ ! $APIL ]] && { _agcc-msg "$dirPrefix*$dirSuffix not found"; exit 1; }
         ;;
     *[!0-9]*)
-        _agcc-msg "\"$APIL\" is not a valid Android API level. It must be min(default)|max|an integer"; exit 1
+        _agcc-msg "invalid Android API level \"$APIL\". Must be min(default)|max|an integer"; exit 1
         ;;
 esac
 
@@ -315,7 +319,7 @@ case ${STL:=gnustl} in
     gnustl ) STL_TAG="" ;;
     libc++ ) STL_TAG=-stlc++ ;;
     stlport) STL_TAG=-stlport ;;
-    *) _agcc-msg "\"$STL\" is not a valid C++ STL. It must be gnustl(default)|libc++|stlport"; exit 1 ;;
+    *) _agcc-msg "invalid C++ STL \"$STL\". Must be gnustl(default)|libc++|stlport"; exit 1 ;;
 esac
 
 ################################################################################
@@ -328,18 +332,18 @@ if [[ $HACK ]]; then
     [[ $CMD_MODE != -C ]] && { _agcc-msg "--host option must be used with -C option"; exit 1; }
 
     hoList=(${HACK//,/ }) #replace comma with space, then turn to a array
-    [[ ! $hoList[0] ]] && { _agcc-msg "\"$HACK\" is not a valid hack option. Should be combination of available options(use --help-hack to show), joined by comma"; exit 1; }
+    [[ ! $hoList[0] ]] && { _agcc-msg "invalid hack options \"$HACK\". Use --help-hack to show available options"; exit 1; }
 
     function already_checked { local ho; for ho in "${HACK_LIST[@]}"; do [[ $1 == $ho ]] && return 0; done; return 1; }
 
     for ho in "${hoList[@]}"; do
-        [[ $ho == /* || $ho == */ || $ho == */*/* || ! -d $hackDir/$ho ]] && { _agcc-msg "\"$ho\" is not a valid hack option. Should be combination of available options(use --help-hack to show), joined by comma"; exit 1; }
+        [[ $ho == /* || $ho == */ || $ho == */*/* || ! -d $hackDir/$ho ]] && { _agcc-msg "invalid hack option \"$ho\". Use --help-hack to show available options"; exit 1; }
 
         if [[ $ho == */* ]]; then #?* means at least 1 char
             dirList=("$hackDir/$ho")
         else
             dirList=("$hackDir/$ho"/*)
-            [[ $dirList[0] == *\** ]] && { _agcc-msg "hack option \"$ho\" not available. Should be combination of available options(use --help-hack to show), joined by comma"; exit 1; }
+            [[ $dirList[0] == *\** ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; exit 1; }
         fi
 
         ok=""
@@ -351,11 +355,22 @@ if [[ $HACK ]]; then
             fi
         done
 
-        [[ ! $ok ]] && { _agcc-msg "hack option \"$ho\" not available. Should be combination of available options(use --help-hack to show), joined by comma"; exit 1; }
+        [[ ! $ok ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; exit 1; }
     done
 
     #remove hackDir/ from every item
     HACK_LIST=("${HACK_LIST[@]##$hackDir/}")
+fi
+
+################################################################################
+#check others
+if [[ $CCACHE ]]; then
+    which ccache > /dev/null || { _agcc-msg "ccache not found in \$PATH"; exit 1; }
+fi
+
+if [[ $NDK == *\ * ]]; then
+    [[ $CMD == -c ]] && { agcc-msg "warning: \$NDK contains spaces so \$CC... maybe not works due to path split"; exit 1; }
+    [[ $CMD == -C ]] && { agcc-msg "warning: \$NDK contains spaces so \$CC_target... maybe not works due to path split"; exit 1; }
 fi
 
 ################################################################################
@@ -422,6 +437,15 @@ fi
 #do not want toolchain's make awk python take precedence of existing one. So move it to ../tools
 [[ -f "$BIN"/idle ]] && mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/smtpd.py "$BIN"/2to3 "$BIN"/idle "$BIN"/../tools/ 2>/dev/null
 
+#build gcc wrapper for ccache
+if [[ $CCACHE && ! -f "$BIN"/../ccache/gcc ]]; then
+    mkdir "$BIN"/../ccache 2> /dev/null;
+    for f in g++ cc c++ clang clang++ gcc; do
+        cat > "$BIN"/../ccache/$f <<<"#!/bin/bash
+        exec ccache \"\${0%/*}/../bin/$f\" \"\$@\"" && chmod a+x "$BIN"/../ccache/$f
+    done
+fi
+
 ################################################################################
 #make some symbol-link such as gcc @-> arm-linux-androideabi-gcc
 #also link cc @-> gcc
@@ -482,6 +506,19 @@ if [[ $AGCC_BIN ]]; then
         _agcc-guide "Undo \$PATH changes from previous toolchain with \$AGCC_BIN" && _agcc-guide "\"${AGCC_BIN/#$NDK/\$NDK}\""
         _agcc-guide "Removed previous \$AGCC_BIN/../tools from \$PATH."
     fi
+
+    [[ $GUIDE ]] && oldStr=$PATH
+
+    d=$AGCC_BIN/../ccache
+    PATH=${PATH//:$d:/:}    #replace :dir: with :
+    PATH=${PATH#$d:}        #remove   dir: from head
+    PATH=${PATH%:$d}        #remove  :dir  from tail
+
+    if [[ $GUIDE && $oldStr != $PATH ]]; then
+        [[ $GUIDE != havePrintedAGCC_BIN ]] && GUIDE=havePrintedAGCC_BIN && \
+        _agcc-guide "Undo \$PATH changes from previous toolchain with \$AGCC_BIN" && _agcc-guide "\"${AGCC_BIN/#$NDK/\$NDK}\""
+        _agcc-guide "Removed previous \$AGCC_BIN/../ccache from \$PATH."
+    fi
 fi
 unset AGCC_BIN
 
@@ -539,10 +576,14 @@ case $OSTYPE in
     *)       _agcc-dbg "unsupported OSTYPE \"$OSTYPE\", so not set GYP_DEFINES=\"host_os=?\"" ;;
 esac
 
+CCACHE_PREFIX=""; Q=""
+[[ $CCACHE ]] && CCACHE_PREFIX="ccache " && Q=\"
+
 case $CMD_MODE in
 ################################################################################
 "")  #$PATH mode(redirect mode)
     export PATH=$BIN:$PATH
+    [[ $CCACHE ]] && export PATH=$BIN/../ccache:$PATH
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Prepended to \$PATH. So you can use these commands (First choice):"
@@ -553,6 +594,11 @@ case $CMD_MODE in
         _agcc-guide " ndk-depends ndk-gdb ndk-which ndk-stack ..."
         _agcc-guide "As a fallback, ../tools(python make awk...) are appended to \$PATH."
         _agcc-guide ""
+        if [[ $CCACHE ]]; then
+            _agcc-guide "Prepended \$BIN/../ccache to \$PATH, the ccache's gcc... supersede all above."
+            _agcc-guide " cc gcc g++ c++ cpp clang clang++"
+            _agcc-guide ""
+        fi
 
         #change prompt
         PS1="[$NAME] ";
@@ -560,27 +606,27 @@ case $CMD_MODE in
     ;;
 ################################################################################
 -c) #$CC mode
-    export CC=$BIN/gcc
-    export CXX=$BIN/g++
+    export CC=$CCACHE_PREFIX$BIN/gcc
+    export CXX=$CCACHE_PREFIX$BIN/g++
     export LD=$BIN/ld
     export AR=$BIN/ar
     export AS=$BIN/as
     export RANLIB=$BIN/ranlib
     export STRIP=$BIN/strip
     export NM=$BIN/nm
-    export LINK=$BIN/g++
+    export LINK=$CCACHE_PREFIX$BIN/g++
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Following env vars have been exported:"
-        _agcc-guide " export CC=\$BIN/gcc"
-        _agcc-guide " export CXX=\$BIN/g++"
+        _agcc-guide " export CC=$Q$CCACHE_PREFIX\$BIN/gcc$Q"
+        _agcc-guide " export CXX=$Q$CCACHE_PREFIX\$BIN/g++$Q"
         _agcc-guide " export LD=\$BIN/ld"
         _agcc-guide " export AR=\$BIN/ar"
         _agcc-guide " export AS=\$BIN/as"
         _agcc-guide " export RANLIB=\$BIN/ranlib"
         _agcc-guide " export STRIP=\$BIN/strip"
         _agcc-guide " export NM=\$BIN/nm"
-        _agcc-guide " export LINK=\$BIN/g++"
+        _agcc-guide " export LINK=$Q$CCACHE_PREFIX\$BIN/g++$Q"
         _agcc-guide ""
 
         #change prompt
@@ -589,27 +635,27 @@ case $CMD_MODE in
     ;;
 ################################################################################
 -C) #$CC_target mode
-    export CC_target=$BIN/gcc
-    export CXX_target=$BIN/g++
+    export CC_target=$CCACHE_PREFIX$BIN/gcc
+    export CXX_target=$CCACHE_PREFIX$BIN/g++
     export LD_target=$BIN/ld
     export AR_target=$BIN/ar
     export AS_target=$BIN/as
     export RANLIB_target=$BIN/ranlib
     export STRIP_target=$BIN/strip
     export NM_target=$BIN/nm
-    export LINK_target=$BIN/g++
+    export LINK_target=$CCACHE_PREFIX$BIN/g++
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Following env vars have been exported:"
-        _agcc-guide " export CC_target=\$BIN/gcc"
-        _agcc-guide " export CXX_target=\$BIN/g++"
+        _agcc-guide " export CC_target=$Q$CCACHE_PREFIX\$BIN/gcc$Q"
+        _agcc-guide " export CXX_target=$Q$CCACHE_PREFIX\$BIN/g++$Q"
         _agcc-guide " export LD_target=\$BIN/ld"
         _agcc-guide " export AR_target=\$BIN/ar"
         _agcc-guide " export AS_target=\$BIN/as"
         _agcc-guide " export RANLIB_target=\$BIN/ranlib"
         _agcc-guide " export STRIP_target=\$BIN/strip"
         _agcc-guide " export NM_target=\$BIN/nm"
-        _agcc-guide " export LINK_target=\$BIN/g++"
+        _agcc-guide " export LINK_target=$Q$CCACHE_PREFIX\$BIN/g++$Q"
         _agcc-guide ""
 
         #change prompt
