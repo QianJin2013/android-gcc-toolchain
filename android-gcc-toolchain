@@ -293,9 +293,9 @@ case ${APIL:=min} in
 
         #glob dir list, add to dirList if globed.
         tmpList=("$dirPrefix"?$dirSuffix)
-        [[ $tmpList[0] != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
+        [[ ${tmpList[0]} != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
         tmpList=("$dirPrefix"??$dirSuffix)
-        [[ $tmpList[0] != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
+        [[ ${tmpList[0]} != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
 
         #get first or last dir name, e.x. ...android-9/arch-... or ...android-24/arch-...
         if [[ $APIL == min ]]; then
@@ -334,7 +334,7 @@ if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
     [[ ! $ENV_MODE ]] && { _agcc-msg "--host option must be used with -c or -C option"; exit 1; }
 
     hoList=(${HACK//,/ }) #replace comma with space, then turn to a array
-    [[ ! $hoList[0] ]] && { _agcc-msg "invalid hack options \"$HACK\". Use --help-hack to show available options"; exit 1; }
+    [[ ! ${hoList[0]} ]] && { _agcc-msg "invalid hack options \"$HACK\". Use --help-hack to show available options"; exit 1; }
 
     function already_checked { local ho; for ho in "${HACK_LIST[@]}"; do [[ $1 == $ho ]] && return 0; done; return 1; }
 
@@ -348,7 +348,7 @@ if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
             dirList=("$hackDir/$ho")
         else
             dirList=("$hackDir/$ho"/*)
-            [[ $dirList[0] == *\** ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
+            [[ ${dirList[0]} == *\** ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
         fi
 
         ok=""
@@ -436,6 +436,13 @@ fi
 
 #do not want toolchain's make awk python take precedence of existing one. So move it to ../tools
 [[ -f "$BIN"/idle ]] && mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/smtpd.py "$BIN"/2to3 "$BIN"/idle "$BIN"/../tools/ 2>/dev/null
+
+#fix possible bug of android-mips: g++ -mips32r2 option cause error "bits/c++config.h" not found.
+#so merge bits/*.h to standard place
+if [[ $ARCH == mips && ! -f $BIN/../.bits_h_merged ]]; then
+    ln "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/
+    touch "$BIN/../.bits_h_merged"
+fi
 
 #build gcc wrapper for ccache
 if [[ $CCACHE && ! -f "$BIN"/../ccache/gcc ]]; then
