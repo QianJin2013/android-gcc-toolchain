@@ -221,7 +221,7 @@ When want run commands(such as gcc), just prepend above command to your command.
       android-24-arm64 toolchain is ready! ...
     ```
 
-6. **Automatically create standalone toolchain the first time.**
+6. **Automatically create standalone toolchain at first time.**
 
     As described in [options](#options), options are compatible with $NDK/build/tools/make_standalone_toolchain.py:
     `--arch`,`--api`, `--stl`,`--force`,`--verbose`.
@@ -233,7 +233,7 @@ When want run commands(such as gcc), just prepend above command to your command.
     
     You can specify `--copy` to force use traditional copy mode. 
 
-8. **Support ccache to speed up repeat compilation.**
+8. **Support ccache to speed up repeating compilation.**
 
     Specify `--ccache` option will use `ccache gcc ...` to compile.
     This option cooperate with Redirection Mode or Env Mode -c($CC...) or -C($CC_target...).
@@ -407,7 +407,7 @@ The *ARCH* means arm,arm64,x86,x64,mipsel. For x64, need add `--openssl-no-asm` 
 
 See also: [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
 
-**To compile repeatedly and quickly, you'd better add `--ccache` option for `android-gcc-toolchain`**
+**To speed up repeating compilation, you'd better add `--ccache` option for `android-gcc-toolchain`**
 
 First you need install `ccache` by `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux. then:
 
