@@ -292,12 +292,12 @@ but not the first choice if there are already same commands in $PATH.
 
 ###About Hack mode
  
-It solves some common cross-compile problems on Mac or Linux:
+It solves some common cross-compile problems on Mac or Linux, most are host-side problem:
 
 - [Mac] **ar**: Some projects does not honor `$AR_target` when make Android-side static
  lib(*.a). Instead, they call Mac-side ar command, so cause wrong result.
  
-    `--hack ar-dual-os` prepend hack dir to `$PATH` so its ar will be called first.
+    `--hack ar-dual-os` supersede gcc/g++/cc/c++ in $PATH, 
     **It detect input \*.o file format, Mac or Android, then call correct one.**
  
 - [Mac] **librt**: Some projects use link option `-lrt` (librt) comes from linux, but
