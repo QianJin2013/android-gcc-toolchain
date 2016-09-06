@@ -324,12 +324,16 @@ It solves some common cross-compile problems on Mac or Linux:
 
 [NodeJS](https://github.com/nodejs/node): 6.3.1-6.5.0
 
-It's easy to build NodeJS for Android if specify --without-snapshot --without-inspector --without-intl --openssl-no-asm(only for x64).
+It's easy to build NodeJS for Android on Mac/Linux if drop some functionality by option --without-snapshot --without-inspector --without-intl --openssl-no-asm(only for x64).
 
-```
-android-gcc-toolchain ARCH <<< "./configure --dest-cpu=ARCH --dest-os=android --without-snapshot --without-inspector --without-intl --openssl-no-asm && make"
-```
-The *ARCH* means arm,arm64,x86,x64,mipsel. For x64, need add `--openssl-no-asm` for ./configure.
+- arm,arm64,x86,x64,mipsel:
+
+    ```
+    android-gcc-toolchain $ARCH <<< "./configure --dest-cpu=$ARCH --dest-os=android --without-snapshot --without-inspector --without-intl && make"
+    ```
+    
+    Please replace `$ARCH` with above arch(arm,...). 
+    **For x64 only:** need add `--openssl-no-asm` for the configure command due to openssl not ready for android-x64.
 
 **To perfectly build without losing any functionality**, you can:
 
