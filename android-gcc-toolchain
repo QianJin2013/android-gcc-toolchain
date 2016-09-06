@@ -484,12 +484,6 @@ if [[ $CCACHE ]]; then
     which ccache > /dev/null || { _agcc-msg "ccache not found in \$PATH"; exit 1; }
 fi
 
-#check $NDK
-if [[ $ENV_MODE && $NDK == *\ * ]]; then
-    [[ $ENV_MODE == -c ]] && { agcc-msg "warning: \$NDK contains spaces so \$CC... maybe not works due to path split unexpectedly"; exit 1; }
-    [[ $ENV_MODE == -C ]] && { agcc-msg "warning: \$NDK contains spaces so \$CC_target... maybe not works due to path split unexpectedly"; exit 1; }
-fi
-
 ################################################################################
 #check verbose mode or interactive bash just for show guide and prompt
 INTER_BASH=""; [[ ! $CMD && -t 0 && -t 2 ]] && INTER_BASH=YES
@@ -595,8 +589,10 @@ case $OSTYPE in
     *)       _agcc-dbg "unsupported OSTYPE \"$OSTYPE\", so not set GYP_DEFINES=\"host_os=?\"" ;;
 esac
 
-CCACHE_PREFIX=""; Q=""
-[[ $CCACHE ]] && CCACHE_PREFIX="ccache " && Q=\"
+#if $NDK contains spaces, then should be quoted in $CC... $CC_target...
+q=""; Q=""; [[ $NDK == *\ * ]] && q=\" && Q=\\\"
+
+CCACHE_PREFIX=""; CCACHE_PREFIX_=""; [[ $CCACHE ]] && CCACHE_PREFIX="ccache " && CCACHE_PREFIX_="ccache\\ " 
 
 case $ENV_MODE in
 ################################################################################
@@ -625,27 +621,27 @@ case $ENV_MODE in
     ;;
 ################################################################################
 -c) #$CC mode
-    export CC=$CCACHE_PREFIX$BIN/gcc
-    export CXX=$CCACHE_PREFIX$BIN/g++
-    export LD=$BIN/ld
-    export AR=$BIN/ar
-    export AS=$BIN/as
-    export RANLIB=$BIN/ranlib
-    export STRIP=$BIN/strip
-    export NM=$BIN/nm
-    export LINK=$CCACHE_PREFIX$BIN/g++
+    export CC=$CCACHE_PREFIX$q$BIN/gcc$q
+    export CXX=$CCACHE_PREFIX$q$BIN/g++$q
+    export LD=$q$BIN/ld$q
+    export AR=$q$BIN/ar$q
+    export AS=$q$BIN/as$q
+    export RANLIB=$q$BIN/ranlib$q
+    export STRIP=$q$BIN/strip$q
+    export NM=$q$BIN/nm$q
+    export LINK=$CCACHE_PREFIX$q$BIN/g++$q
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Following env vars have been exported:"
-        _agcc-guide " export CC=$Q$CCACHE_PREFIX\$BIN/gcc$Q"
-        _agcc-guide " export CXX=$Q$CCACHE_PREFIX\$BIN/g++$Q"
-        _agcc-guide " export LD=\$BIN/ld"
-        _agcc-guide " export AR=\$BIN/ar"
-        _agcc-guide " export AS=\$BIN/as"
-        _agcc-guide " export RANLIB=\$BIN/ranlib"
-        _agcc-guide " export STRIP=\$BIN/strip"
-        _agcc-guide " export NM=\$BIN/nm"
-        _agcc-guide " export LINK=$Q$CCACHE_PREFIX\$BIN/g++$Q"
+        _agcc-guide " export CC=$CCACHE_PREFIX_$Q\$BIN/gcc$Q"
+        _agcc-guide " export CXX=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
+        _agcc-guide " export LD=$Q\$BIN/ld$Q"
+        _agcc-guide " export AR=$Q\$BIN/ar$Q"
+        _agcc-guide " export AS=$Q\$BIN/as$Q"
+        _agcc-guide " export RANLIB=$Q\$BIN/ranlib$Q"
+        _agcc-guide " export STRIP=$Q\$BIN/strip$Q"
+        _agcc-guide " export NM=$Q\$BIN/nm$Q"
+        _agcc-guide " export LINK=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
         _agcc-guide ""
 
         #change prompt
@@ -654,27 +650,27 @@ case $ENV_MODE in
     ;;
 ################################################################################
 -C) #$CC_target mode
-    export CC_target=$CCACHE_PREFIX$BIN/gcc
-    export CXX_target=$CCACHE_PREFIX$BIN/g++
-    export LD_target=$BIN/ld
-    export AR_target=$BIN/ar
-    export AS_target=$BIN/as
-    export RANLIB_target=$BIN/ranlib
-    export STRIP_target=$BIN/strip
-    export NM_target=$BIN/nm
-    export LINK_target=$CCACHE_PREFIX$BIN/g++
+    export CC_target=$CCACHE_PREFIX$q$BIN/gcc$q
+    export CXX_target=$CCACHE_PREFIX$q$BIN/g++$q
+    export LD_target=$q$BIN/ld$q
+    export AR_target=$q$BIN/ar$q
+    export AS_target=$q$BIN/as$q
+    export RANLIB_target=$q$BIN/ranlib$q
+    export STRIP_target=$q$BIN/strip$q
+    export NM_target=$q$BIN/nm$q
+    export LINK_target=$CCACHE_PREFIX$q$BIN/g++$q
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Following env vars have been exported:"
-        _agcc-guide " export CC_target=$Q$CCACHE_PREFIX\$BIN/gcc$Q"
-        _agcc-guide " export CXX_target=$Q$CCACHE_PREFIX\$BIN/g++$Q"
-        _agcc-guide " export LD_target=\$BIN/ld"
-        _agcc-guide " export AR_target=\$BIN/ar"
-        _agcc-guide " export AS_target=\$BIN/as"
-        _agcc-guide " export RANLIB_target=\$BIN/ranlib"
-        _agcc-guide " export STRIP_target=\$BIN/strip"
-        _agcc-guide " export NM_target=\$BIN/nm"
-        _agcc-guide " export LINK_target=$Q$CCACHE_PREFIX\$BIN/g++$Q"
+        _agcc-guide " export CC_target=$CCACHE_PREFIX_$Q\$BIN/gcc$Q"
+        _agcc-guide " export CXX_target=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
+        _agcc-guide " export LD_target=$Q\$BIN/ld$Q"
+        _agcc-guide " export AR_target=$Q\$BIN/ar$Q"
+        _agcc-guide " export AS_target=$Q\$BIN/as$Q"
+        _agcc-guide " export RANLIB_target=$Q\$BIN/ranlib$Q"
+        _agcc-guide " export STRIP_target=$Q\$BIN/strip$Q"
+        _agcc-guide " export NM_target=$Q\$BIN/nm$Q"
+        _agcc-guide " export LINK_target=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
         _agcc-guide ""
 
         #change prompt
