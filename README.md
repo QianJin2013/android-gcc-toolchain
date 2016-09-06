@@ -329,8 +329,9 @@ It's easy to build NodeJS for Android if specify --without-snapshot --without-in
 ```
 android-gcc-toolchain ARCH <<< "./configure --dest-cpu=ARCH --dest-os=android --without-snapshot --without-inspector --without-intl --openssl-no-asm && make"
 ```
+The *ARCH* means arm,arm64,x86,x64, and mipsel. The `--openssl-no-asm` can be omitted if openssl correctly support asm for the ARCH.
 
-To perfectly build without losing any functionality, you can:
+**To perfectly build without losing any functionality**, you can:
 
 - on Mac<a name="build-nodejs-for-android-perfectly-on-mac"></a>
 
@@ -359,9 +360,14 @@ To perfectly build without losing any functionality, you can:
         sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
         android-gcc-toolchain x64 --hack ar-dual-os,gcc-no-lrt -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
         ```
-        The first command is to modify a bug of `configure` script, it's unavoidable.
-        The `--openssl-no-asm` is needed because openssl configure is not ready for android-x64. 
+        The sed command is to modify a bug of `configure`. `--openssl-no-asm` is because openssl is not ready for android-x64. 
 
+    - android-mips
+    
+        ```
+        android-gcc-toolchain mipsel --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=mipsel --dest-os=android && make"
+        ```
+    
 - on Linux<a name="build-nodejs-for-android-perfectly-on-linux"></a>
 
     - android-arm
@@ -378,13 +384,13 @@ To perfectly build without losing any functionality, you can:
 
     - android-x86
     
-        You'd better run `sudo apt-get install -y g++-multilib` first to include some 32bit lib and include files.
+        You'd better first run `sudo apt-get install -y g++-multilib` to install some 32bit lib and .h files 
+        otherwise it complains sys/cdefs.h not found.
         
         ```
         sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
         android-gcc-toolchain x86 --hack gcc-m32,gcc-lpthread -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
         ```
-        The first command is to modify a bug of `configure` script.
 
     - android-x64
     
@@ -392,9 +398,14 @@ To perfectly build without losing any functionality, you can:
         sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
         android-gcc-toolchain x64 --hack gcc-lpthread -C <<< "./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
         ```
-        The first command is to modify a bug of `configure` script.
-        The `--openssl-no-asm` is needed because openssl configure is not ready for android-x64. 
+        The sed command is to modify a bug of `configure`. `--openssl-no-asm` is because openssl is not ready for android-x64. 
     
+    - android-mips
+    
+        ```
+        android-gcc-toolchain mipsel --hack gcc-m32,gcc-lpthread -C <<< "./configure --dest-cpu=mipsel --dest-os=android && make"
+        ```
+
 See also: [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
 
 **To compile repeatedly and quickly, you'd better add `--ccache` option for `android-gcc-toolchain`**
