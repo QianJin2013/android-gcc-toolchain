@@ -60,9 +60,9 @@ Env Mode: Specify whether set $PATH or $CC... or $CC_target...
  omitted        This is the Redirect Mode.
                 Set $PATH to redirect gcc... to the toolchain's gcc...
                 e.g. export PATH=".../std-toolchains/.../bin:$PATH"
- -c             Set $CC,$CXX,$LD,$AR,$AS,$RANLIB,$STRIP,$NM,$LINK
+ -c             Set $CC,$CXX,$LINK,$AR,$AS,$RANLIB,$LD,$STRIP,$NM
                 e.g. export CC=".../std-toolchains/.../bin/gcc"
- -C             Set $CC_target,$CXX_target,$AR_target... ...$LINK_target
+ -C             Set $CC_target,$CXX_target,$LINK_target,...,$NM_target
                 e.g. export CC_target=".../std-toolchains/.../bin/gcc"
 
 Compiler options:
@@ -273,8 +273,8 @@ After you upgrade your NDK, you need specify `--force` option to recreate toolch
 - BIN AGCC_BIN AGCC_HACK_DIR: will be set for cleaner and as mnemonics.
 
 - Following vars will be set for specified Env Mode, otherwise cleared:
- - CC CXX LD AR AS RANLIB STRIP NM LINK CC_target CXX_target
- - LD_target AR_target AS_target RANLIB_target STRIP_target NM_target LINK_target
+ - CC CXX LINK AR CC_target CXX_target LINK_target AR_target
+ - AS RANLIB LD STRIP NM AS_target RANLIB_target LD_target STRIP_target NM_target
 
 ### About redirect mode
 
