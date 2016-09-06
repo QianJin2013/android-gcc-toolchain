@@ -186,7 +186,7 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg "About Redirect Mode (Run command without -c or -C)"
         _agcc-msg ""
         _agcc-msg "In this mode, the following commands are redirected to the toolchain's one."
-        _agcc-msg " cc(->gcc) gcc g++ c++ cpp clang clang++ yasm ld ar as ranlib strip ..."
+        _agcc-msg " cc(->gcc) gcc g++ c++ cpp clang clang++ yasm ar as ranlib ld strip ..."
         _agcc-msg " readelf objdump nm c++filt elfedit objcopy strings size ..."
         _agcc-msg " gdb addr2line gcov gprof gcore dwp ..."
         _agcc-msg " llvm-as llvm-dis llvm-link FileCheck ..."
