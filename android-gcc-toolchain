@@ -125,9 +125,9 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg " omitted        This is the Redirect Mode."
         _agcc-msg "                Set \$PATH to redirect gcc... to the toolchain's gcc..."
         _agcc-msg "                e.g. export PATH=\".../std-toolchains/.../bin:\$PATH\""
-        _agcc-msg " -c             Set \$CC,\$CXX,\$LD,\$AR,\$AS,\$RANLIB,\$STRIP,\$NM,\$LINK"
+        _agcc-msg " -c             Set \$CC,\$CXX,\$LINK,\$AR,\$AS,\$RANLIB,\$LD,\$STRIP,\$NM"
         _agcc-msg "                e.g. export CC=\".../std-toolchains/.../bin/gcc\""
-        _agcc-msg " -C             Set \$CC_target,\$CXX_target,\$AR_target... ...\$LINK_target"
+        _agcc-msg " -C             Set \$CC_target,\$CXX_target,\$LINK_target,...,\$NM_target"
         _agcc-msg "                e.g. export CC_target=\".../std-toolchains/.../bin/gcc\""
         _agcc-msg ""
         _agcc-msg "Compiler options:"
@@ -180,8 +180,8 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg "BIN AGCC_BIN AGCC_HACK_DIR: will be set for cleaner and as mnemonics."
         _agcc-msg ""
         _agcc-msg "Following vars will be set for specified Env Mode, otherwise cleared:"
-        _agcc-msg " CC CXX LD AR AS RANLIB STRIP NM LINK CC_target CXX_target"
-        _agcc-msg " LD_target AR_target AS_target RANLIB_target STRIP_target NM_target LINK_target"
+        _agcc-msg " CC CXX LINK AR CC_target CXX_target LINK_target AR_target"
+        _agcc-msg " AS RANLIB LD STRIP NM AS_target RANLIB_target LD_target STRIP_target NM_target"
         _agcc-msg "--------------------------------------------------------------------------------"
         _agcc-msg "About Redirect Mode (Run command without -c or -C)"
         _agcc-msg ""
@@ -559,10 +559,9 @@ unset AGCC_HACK_DIR
 
 ################################################################################
 #clear some maybe-inherited var
-unset CC CXX LD AR AS RANLIB STRIP NM LINK
-unset CC_target CXX_target LD_target AR_target AS_target RANLIB_target STRIP_target NM_target LINK_target
-unset PS1
-unset GYP_DEFINES
+unset CC CXX LINK AR AS RANLIB LD STRIP NM
+unset CC_target CXX_target LINK_target AR_target AS_target RANLIB_target LD_target STRIP_target NM_target
+unset GYP_DEFINES PS1
 
 ################################################################################
 #save bin dir for cleaner and as mnemonics
@@ -623,25 +622,25 @@ case $ENV_MODE in
 -c) #$CC mode
     export CC=$CCACHE_PREFIX$q$BIN/gcc$q
     export CXX=$CCACHE_PREFIX$q$BIN/g++$q
-    export LD=$q$BIN/ld$q
+    export LINK=$CCACHE_PREFIX$q$BIN/g++$q
     export AR=$q$BIN/ar$q
     export AS=$q$BIN/as$q
     export RANLIB=$q$BIN/ranlib$q
+    export LD=$q$BIN/ld$q
     export STRIP=$q$BIN/strip$q
     export NM=$q$BIN/nm$q
-    export LINK=$CCACHE_PREFIX$q$BIN/g++$q
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Following env vars have been exported:"
         _agcc-guide " export CC=$CCACHE_PREFIX_$Q\$BIN/gcc$Q"
         _agcc-guide " export CXX=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
-        _agcc-guide " export LD=$Q\$BIN/ld$Q"
+        _agcc-guide " export LINK=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
         _agcc-guide " export AR=$Q\$BIN/ar$Q"
         _agcc-guide " export AS=$Q\$BIN/as$Q"
         _agcc-guide " export RANLIB=$Q\$BIN/ranlib$Q"
+        _agcc-guide " export LD=$Q\$BIN/ld$Q"
         _agcc-guide " export STRIP=$Q\$BIN/strip$Q"
         _agcc-guide " export NM=$Q\$BIN/nm$Q"
-        _agcc-guide " export LINK=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
         _agcc-guide ""
 
         #change prompt
@@ -652,25 +651,25 @@ case $ENV_MODE in
 -C) #$CC_target mode
     export CC_target=$CCACHE_PREFIX$q$BIN/gcc$q
     export CXX_target=$CCACHE_PREFIX$q$BIN/g++$q
-    export LD_target=$q$BIN/ld$q
+    export LINK_target=$CCACHE_PREFIX$q$BIN/g++$q
     export AR_target=$q$BIN/ar$q
     export AS_target=$q$BIN/as$q
     export RANLIB_target=$q$BIN/ranlib$q
+    export LD_target=$q$BIN/ld$q
     export STRIP_target=$q$BIN/strip$q
     export NM_target=$q$BIN/nm$q
-    export LINK_target=$CCACHE_PREFIX$q$BIN/g++$q
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Following env vars have been exported:"
         _agcc-guide " export CC_target=$CCACHE_PREFIX_$Q\$BIN/gcc$Q"
         _agcc-guide " export CXX_target=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
-        _agcc-guide " export LD_target=$Q\$BIN/ld$Q"
+        _agcc-guide " export LINK_target=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
         _agcc-guide " export AR_target=$Q\$BIN/ar$Q"
         _agcc-guide " export AS_target=$Q\$BIN/as$Q"
         _agcc-guide " export RANLIB_target=$Q\$BIN/ranlib$Q"
+        _agcc-guide " export LD_target=$Q\$BIN/ld$Q"
         _agcc-guide " export STRIP_target=$Q\$BIN/strip$Q"
         _agcc-guide " export NM_target=$Q\$BIN/nm$Q"
-        _agcc-guide " export LINK_target=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
         _agcc-guide ""
 
         #change prompt
