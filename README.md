@@ -329,7 +329,7 @@ It's easy to build NodeJS for Android if specify --without-snapshot --without-in
 ```
 android-gcc-toolchain ARCH <<< "./configure --dest-cpu=ARCH --dest-os=android --without-snapshot --without-inspector --without-intl --openssl-no-asm && make"
 ```
-The *ARCH* means arm,arm64,x86,x64, and mipsel. For x64, need add `--openssl-no-asm` for ./configure.
+The *ARCH* means arm,arm64,x86,x64,mipsel. For x64, need add `--openssl-no-asm` for ./configure.
 
 **To perfectly build without losing any functionality**, you can:
 
@@ -350,7 +350,6 @@ The *ARCH* means arm,arm64,x86,x64, and mipsel. For x64, need add `--openssl-no-
     - android-x86
     
         ```
-        sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure
         android-gcc-toolchain x86 --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=x86 --dest-os=android && make"
         ```
     
