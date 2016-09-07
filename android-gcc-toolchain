@@ -331,7 +331,7 @@ if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
 
     #ugly: treat -C anywhere as ENV_MODE -C, so avoid following incredible validation error
     [[ ! $ENV_MODE ]] && for arg in "$@"; do [[ $arg == -c || $arg == -C ]] && ENV_MODE=$arg && break; done
-    [[ ! $ENV_MODE ]] && { _agcc-msg "--host option must be used with -c or -C option"; exit 1; }
+    [[ ! $ENV_MODE ]] && { _agcc-msg "--hack option must be used with -c or -C option"; exit 1; }
 
     hoList=(${HACK//,/ }) #replace comma with space, then turn to a array
     [[ ! ${hoList[0]} ]] && { _agcc-msg "invalid hack options \"$HACK\". Use --help-hack to show available options"; exit 1; }
@@ -435,13 +435,14 @@ else
 fi
 
 #do not want toolchain's make awk python take precedence of existing one. So move it to ../tools
-[[ -f "$BIN"/idle ]] && mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/smtpd.py "$BIN"/2to3 "$BIN"/idle "$BIN"/../tools/ 2>/dev/null
+[[ -f "$BIN"/idle ]] \
+&& mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/smtpd.py "$BIN"/2to3 "$BIN"/idle "$BIN"/../tools/ 2>/dev/null
 
 #fix possible bug of android-mips: g++ -mips32r2 option cause error "bits/c++config.h" not found.
 #so merge bits/*.h to standard place
 if [[ $ARCH == mips && ! -f $BIN/../.bits_h_merged ]]; then
-    ln "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/
-    touch "$BIN/../.bits_h_merged"
+    ln -f "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/ \
+    && touch "$BIN/../.bits_h_merged"
 fi
 
 #build gcc wrapper for ccache
