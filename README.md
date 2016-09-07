@@ -1,18 +1,21 @@
 ## android-gcc-toolchain
-A single command to enter android cross compile environment without manually create NDK standalone toolchain and env vars. 
-
-- Mac: OS X 10.11.5/10.11.6 EI Capitan (64bit)
-    - [NDK 12.1.29](https://dl.google.com/android/repository/android-ndk-r12b-darwin-x86_64.zip)
-- Linux: Ubuntu 16.04 (64bit)
-    - [NDK 12.1.29](https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip)
+Enable you to use NDK's standalone toolchain easily, quickly and magically for cross-compile.
 
 As an example, see
-
 - [Build NodeJS for Android perfectly on Mac](#build-nodejs-for-android-perfectly-on-mac).
 - [Build NodeJS for Android perfectly on Linux](#build-nodejs-for-android-perfectly-on-linux).
 
+Tested OS:
+- **Mac**: OS X 10.11.5/10.11.6 EI Capitan (64bit)
+- **Linux**: Ubuntu 16.04 (64bit)
+- *Windows*: Windows Pro 7. in fact not supported, but can be used via [Docker-Toolbox](https://github.com/docker/toolbox/releases/download/v1.12.0/DockerToolbox-1.12.0.exe).
+
 
 ### Prerequisite
+
+NDK: tested on
+ - [NDK 12.1.29 For Mac 64bit](https://dl.google.com/android/repository/android-ndk-r12b-darwin-x86_64.zip)
+ - [NDK 12.1.29 For Linux 64bit](https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip)
 
 Install Android NDK and set env var `NDK` to the dir: `export NDK=__the_top_dir_of_installed_NDK__`.
 
@@ -100,7 +103,9 @@ android-gcc-toolchain arm64 24
 When want run commands(such as gcc), just prepend above command to your command. e.g. 
 `CMD ARGS...` -> `android-gcc-toolchain arm64` `CMD ARGS...`, it works as it implies.
 
-### Features/Ideas
+----
+
+### Features
 
 1. **Run android gcc related commands easily.**
 
@@ -228,7 +233,8 @@ When want run commands(such as gcc), just prepend above command to your command.
     
 7. **Use hard links to speed up creation of toolchain and save disk space.**
 
-    By default, this tool run a modified py file on-the-fly instead of original $NDK/build/tools/make_standalone_toolchain.py. 
+    By default, use hard links. The creation became very fast.
+    This is done by run a modified py file on-the-fly instead of original $NDK/build/tools/make_standalone_toolchain.py. 
     The modified py file replace shutil.copy2 and shutil.copytree with customized copy2 and copytree which use hard link.
     
     You can specify `--copy` to force use traditional copy mode. 
@@ -247,9 +253,29 @@ When want run commands(such as gcc), just prepend above command to your command.
     ccache -M 50G                   #set cache size once is ok
     ```
 
-9. **(TODO) Miscellaneous**
-    - (TODO): Create a docker container for this tool. 
-    - (TODO): Support brew install. 
+9. **A linux container(as docker image) so you can run this tool on Windows (or Mac/Linux if you insist).**
+ 
+    You can run [this container](https://hub.docker.com/r/osexp2000/android-gcc-toolchain/)
+     to enter a [dedicated shell](#dedicated-shell). e.g. 
+    ```
+    $ docker run -it osexp2000/android-gcc-toolchain arm64 --ccache
+    ... ...
+    [android-21-arm64] 
+    ```
+    *(do not enter the `$` or `[...]` which are just a prompt for illustrate).*
+    The `-it` means `--interactive --tty`.
+    
+    Quick start of docker: 
+    - Use volume mapping `-v HOST_DIR_OR_FILE:CONTAINER_DIR_OR_FILE` to map dir/files to container. 
+      Note: **docker-machine on Windows need you put the host dir or files under `C:\Users\...`(e.g. C:\Users\q\Downloads),
+      and the `HOST_DIR_OR_FILE` must be converted to `/c/Users/...` style.
+      Otherwise mapping not works.**
+    - Use `docker cp` to copy files in/out when forgot to use volume mapping.
+    - Do not specify `-t`(`--tty`) if to feed commands to docker via <<<"Here String" or <<EOF Here Document.
+
+10. **(TODO) Support brew install, bash_autocomplete 
+
+----
 
 ### About where the toolchain created
 
