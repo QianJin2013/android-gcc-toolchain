@@ -374,7 +374,7 @@ android-gcc-toolchain x64    <<< "./configure --dest-cpu=x64    --dest-os=androi
 android-gcc-toolchain mipsel <<< "./configure --dest-cpu=mipsel --dest-os=android --without-snapshot --without-inspector --without-intl && make"
 ```
     
-For x64: `--openssl-no-asm` needed due to openssl not ready for android-x64.
+For x64: `--openssl-no-asm` needed due to openssl assembly optimization not ready for android-x64.
 
 ## Full build
 
