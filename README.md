@@ -387,10 +387,10 @@ it's not terrible as sound, it just supersede compiler commands in $PATH and add
 ### Full build on Mac
 
 ```
-android-gcc-toolchain arm --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C    <<< "./configure --dest-cpu=arm    --dest-os=android && make"
-android-gcc-toolchain arm64 --hack ar-dual-os,gcc-no-lrt -C          <<< "./configure --dest-cpu=arm64  --dest-os=android && make"
-android-gcc-toolchain x86 --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C    <<< "./configure --dest-cpu=x86    --dest-os=android && make"
-android-gcc-toolchain x64 --hack ar-dual-os,gcc-no-lrt -C            <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
+android-gcc-toolchain arm    --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=arm    --dest-os=android && make"
+android-gcc-toolchain arm64  --hack ar-dual-os,gcc-no-lrt         -C <<< "./configure --dest-cpu=arm64  --dest-os=android && make"
+android-gcc-toolchain x86    --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=x86    --dest-os=android && make"
+android-gcc-toolchain x64    --hack ar-dual-os,gcc-no-lrt         -C <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
 android-gcc-toolchain mipsel --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=mipsel --dest-os=android && make"
 ```
 The sed command is to modify a bug of `configure`. 
@@ -398,11 +398,11 @@ The sed command is to modify a bug of `configure`.
 ### Full build on Linux
  
 ```
-android-gcc-toolchain arm --hack gcc-m32,gcc-lpthread -C    <<< "./configure --dest-cpu=arm    --dest-os=android && make"
-android-gcc-toolchain arm64 --hack gcc-lpthread -C          <<< "./configure --dest-cpu=arm64  --dest-os=android && make"
-android-gcc-toolchain x86 --hack gcc-m32,gcc-lpthread -C    <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x86 --dest-os=android && make"
-android-gcc-toolchain x64 --hack gcc-lpthread -C            <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
-android-gcc-toolchain mipsel --hack gcc-m32,gcc-lpthread -C <<< "./configure --dest-cpu=mipsel --dest-os=android && make"
+android-gcc-toolchain arm    --hack gcc-lpthread,gcc-m32 -C <<< "./configure --dest-cpu=arm    --dest-os=android && make"
+android-gcc-toolchain arm64  --hack gcc-lpthread         -C <<< "./configure --dest-cpu=arm64  --dest-os=android && make"
+android-gcc-toolchain x86    --hack gcc-lpthread,gcc-m32 -C <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x86 --dest-os=android && make"
+android-gcc-toolchain x64    --hack gcc-lpthread         -C <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
+android-gcc-toolchain mipsel --hack gcc-lpthread,gcc-m32 -C <<< "./configure --dest-cpu=mipsel --dest-os=android && make"
 ```
 
 For x86:You must install 32bit lib by `sudo apt-get install -y g++-multilib gcc-multilib`,otherwise complained about sys/cdefs.h etc. not found.
