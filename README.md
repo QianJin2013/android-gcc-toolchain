@@ -265,12 +265,11 @@ When want run commands(such as gcc), just prepend above command to your command.
     
     *(do not enter the `$` or `[...]` which are just a prompt for illustrate).*
 
-- Quick start of docker: 
-    - The `-it` means `--interactive --tty`.
+- Quick start of docker:
+    - The docker run `-it` means `--interactive --tty`.
     - Use volume mapping `-v HOST_DIR_OR_FILE:CONTAINER_DIR_OR_FILE` to map dir/files to container. 
-      Note: **docker-machine on Windows need you put the host dir or files under `C:\Users\...`(e.g. C:\Users\q\Downloads),
-      and the `HOST_DIR_OR_FILE` must be converted to `/c/Users/...` style.
-      Otherwise mapping not works.**
+      Note: **Docker-Toolbox on Windows need host dir or files is under `C:\Users\...`(e.g. C:\Users\q\Downloads),
+      and the `HOST_DIR_OR_FILE` must be converted to `/c/Users/...` style.**
     - Use `docker cp` to copy files in/out when forgot to use volume mapping.
     - Do not specify `-t`(`--tty`) if to feed commands to docker via <<<"Here String" or <<EOF Here Document.
 
