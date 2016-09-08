@@ -10,7 +10,7 @@ Tested OS:
  
     Although not supported directly,
     it can be used in Docker (Docker image id: `osexp2000/android-gcc-toolchain`)
-    via [Docker-Toolbox](https://github.com/docker/toolbox/releases/download/v1.12.0/DockerToolbox-1.12.0.exe).
+    via [Docker-Toolbox](https://www.docker.com/products/docker-toolbox).
     See [Features-9: Use this tool in Docker](#docker).
 
 
