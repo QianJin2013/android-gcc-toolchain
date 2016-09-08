@@ -406,6 +406,7 @@ android-gcc-toolchain mipsel --hack gcc-m32,gcc-lpthread -C <<< "./configure --d
 
 For x86:You must install 32bit lib by `sudo apt-get install -y g++-multilib gcc-multilib`,otherwise complained about sys/cdefs.h etc. not found.
 
-For more detail, see [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
+For more detail and a prebuilt docker image which contains build result of nodejs, 
+see [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
 
 Good luck.
