@@ -317,6 +317,7 @@ When want run commands(such as gcc), just prepend above command to your command.
 - And as a fallback, `python` `make` `awk`... are moved to ../tools which are appended to $PATH 
     so they are also available if no existing one.
 
+<a name="about-hack-mode"></a>
 ## About Hack mode
  
 It solves some common cross-compile problems on Mac or Linux, most are host-side problem:
