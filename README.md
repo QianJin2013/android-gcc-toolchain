@@ -8,7 +8,12 @@ As an example, see
 Tested OS:
 - **Mac**: OS X 10.11.5/10.11.6 EI Capitan (64bit)
 - **Linux**: Ubuntu 16.04 (64bit)
-- *Windows*: Windows Pro 7. in fact not supported, but can be used via [Docker-Toolbox](https://github.com/docker/toolbox/releases/download/v1.12.0/DockerToolbox-1.12.0.exe).
+- **Windows**: Windows Pro 7.
+ 
+    Although not supported directly,
+    it can be used in a linux container(docker image is [here](https://hub.docker.com/r/osexp2000/android-gcc-toolchain/))
+    via [Docker-Toolbox](https://github.com/docker/toolbox/releases/download/v1.12.0/DockerToolbox-1.12.0.exe).
+    See [Features-9: Linux Container](#docker).
 
 
 ### Prerequisite
@@ -253,7 +258,7 @@ When want run commands(such as gcc), just prepend above command to your command.
     ccache -M 50G                   #set cache size once is ok
     ```
 
-9. **A linux container(as docker image) so you can run this tool on Windows (or Mac/Linux if you insist).**
+9. **<a name=docker></a>A linux container(as docker image) so you can run this tool on Windows (or Mac/Linux if you insist).**
  
     You can run [this container](https://hub.docker.com/r/osexp2000/android-gcc-toolchain/)
      to enter a [dedicated shell](#dedicated-shell). e.g. 
