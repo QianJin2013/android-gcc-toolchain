@@ -26,6 +26,7 @@ if [[ ! $EXE_PATH ]]; then
 fi
 
 ###############################################################################
+#get path of target-side ar and objdump from \$AR_target
 
 if [[ ! $AR_target ]]; then
     _agcc-msg "AR_target not defined."
@@ -38,18 +39,20 @@ AR_target="${AR_target//\"}"
 objdump=${AR_target/%ar/objdump}
 
 ###############################################################################
+#get non-zero a *.o file from arguments
 
 OBJ_FILE=""
 for f in "$@"; do
-    #find a non-zero *.o file
     if [[ ${f/*.} == o && -s $f ]]; then
         OBJ_FILE=$f
         break
     fi
 done
 
+###############################################################################
+#use target objdump to test .o file, if OK, then run target ar
+
 if [[ $OBJ_FILE ]]; then
-    #check .o file archive header by target objdump, if OK, then run target ar
     _agcc-dbg "check \"$OBJ_FILE\" by run \"$objdump\" -a on it"
     if "$objdump" -a "$OBJ_FILE" >/dev/null 2>/dev/null; then
         _agcc-msg "call \"$AR_target\""
@@ -60,6 +63,8 @@ else
     _agcc-msg "no any non-empty *.o file provided for type check."
 fi
 
+###############################################################################
 #otherwise call host ar
+
 _agcc-msg "call \"$EXE_PATH\""
 exec "$EXE_PATH" "$@"

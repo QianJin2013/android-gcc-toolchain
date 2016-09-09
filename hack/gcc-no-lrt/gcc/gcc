@@ -62,7 +62,7 @@ fi
 _agcc-dbg found count: $count, first ind: $ind
 
 ###############################################################################
-#otherwise run command with -lrt
+#otherwise run command without -lrt
 
 _agcc-msg "call \"$EXE_PATH\" without -lrt option"
 if [[ $count == 1 ]]; then

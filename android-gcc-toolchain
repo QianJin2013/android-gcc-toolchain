@@ -3,7 +3,7 @@ function _agcc-msg { echo "$@" >&2; }
 function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
 function _agcc-guide { echo "" "$@" >&2; }
 
-VERSION=1.7.6
+VERSION=1.7.7
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
 _agcc-dbg "thisDir: \"$thisDir\""
@@ -37,8 +37,8 @@ while [[ $# -gt 0 ]]; do
             *) _agcc-msg "invalid C++ STL \"$2\". Must be gnustl(default)|libc++|stlport"; exit 1;;
             esac
             ;;
-    --hack) case $2 in
-            ""|-*) _agcc-msg "expect hack options behind $1. Must be combination of available options(use --help-hack to show), joined by comma"; exit 1;;
+    --host) case $2 in
+            ""|-*) _agcc-msg "expect host compiler rules behind $1. Must be combination of available rules(use --help-host to show), joined by comma"; exit 1;;
             *)  HACK=$2; _agcc-dbg " HACK=\"$2\""; shift;;
             esac
             ;;
@@ -79,7 +79,7 @@ while [[ $# -gt 0 ]]; do
             break
             ;;
     --*)
-            _agcc-msg "invalid option \"$1\". Must be --arch|--api|--stl|--force|--verbose|--copy|--hack|--ccache"
+            _agcc-msg "invalid long option \"$1\". Must be --arch|--api|--stl|--force|--verbose|--copy|--host|--ccache|--version|--help|--help-host"
             exit 1
             ;;
     -*)
@@ -106,10 +106,12 @@ done
 if [[ ! $CMD ]]; then
     case $1 in
     --help)
-        _agcc-msg "Use or create toolchain, set env and run command, or print \"the bin dir/\"."
-        _agcc-msg "${0##*/} [OPTIONS] [CMD [ARGS...]]"
+        _agcc-msg "android-gcc-toolchain $VERSION"
+        _agcc-msg "Enable you to enter an android-oriented cross-compile environment easily."
+        _agcc-msg ""
+        _agcc-msg "Usage: android-gcc-toolchain [OPTIONS] [CMD [ARGS...]]"
         _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "OPTIONS: Toolchain options, Env Mode, Misc options"
+        _agcc-msg "OPTIONS: for toolchain, env mode, CCACHE, host compiler,..."
         _agcc-msg ""
         _agcc-msg "Toolchain options: specify which toolchain to use or create"
         _agcc-msg " [--arch] ARCH  Android architecture:"
@@ -124,8 +126,8 @@ if [[ ! $CMD ]]; then
         _agcc-msg " --copy         Force copy files instead of create hard link of files when"
         _agcc-msg "                create toolchain first time"
         _agcc-msg ""
-        _agcc-msg "Env Mode: Specify whether set \$PATH or \$CC... or \$CC_target..."
-        _agcc-msg " omitted        This is the Redirect Mode."
+        _agcc-msg "Env mode options: Specify whether set \$PATH or \$CC... or \$CC_target..."
+        _agcc-msg " omitted        This is the Redirect mode."
         _agcc-msg "                Set \$PATH to redirect gcc... to the toolchain's gcc..."
         _agcc-msg "                e.g. export PATH=\".../std-toolchains/.../bin:\$PATH\""
         _agcc-msg " -c             Set \$CC,\$CXX,\$LINK,\$AR,\$AS,\$RANLIB,\$LD,\$STRIP,\$NM"
@@ -133,21 +135,23 @@ if [[ ! $CMD ]]; then
         _agcc-msg " -C             Set \$CC_target,\$CXX_target,\$LINK_target,...,\$NM_target"
         _agcc-msg "                e.g. export CC_target=\".../std-toolchains/.../bin/gcc\""
         _agcc-msg ""
-        _agcc-msg "Compiler options:"
-        _agcc-msg " --ccache       Speed up compilation by CCACHE. This will wrap android gcc..."
-        _agcc-msg "                or \$CC... or \$CC_target... with ccache. When in -c or -C mode,"
-        _agcc-msg "                this implies appending a host-side hack option \"ccache\"."
-        _agcc-msg "                If \$USE_CCACHE is 1 then this option is implied."
+        _agcc-msg "CCACHE option: Speed up repeating compilation"
+        _agcc-msg " --ccache       Means compilers(gcc/g++/cc/c++) will run via ccache command."
+        _agcc-msg "                Redirect mode: android compilers use ccache."
+        _agcc-msg "                \$CC mode(-c): android compilers use ccache."
+        _agcc-msg "                \$CC_target mode(-C): android and host compilers use ccache."
+        _agcc-msg "                Note: If \$USE_CCACHE is 1 then this option is implied."
         _agcc-msg ""
-        _agcc-msg "Hack options:"
-        _agcc-msg " --hack  HACK   Hack host(local) compiler commands. Must be combination of"
-        _agcc-msg "                available options(use --help-hack to show), joined by comma."
-        _agcc-msg "                This option only works for -c or -C option."
-        _agcc-msg "                For detail, refer to \"About Hack mode\" section."
+        _agcc-msg "Host compiler option: Add/remove options to host compiler forcibly"
+        _agcc-msg " --host  RULES  Mandatory host compiler rules. Must be a comma joined "
+        _agcc-msg "                combination of available rules(Use --help-host to show)."
+        _agcc-msg "                Only works for \$CC_target mode(-C)."
+        _agcc-msg "                This is done by supersede host compiler in \$PATH by some"
+        _agcc-msg "                wrapper scripts to add/remove option then transfer to original."
         _agcc-msg ""
         _agcc-msg "Other options:"
         _agcc-msg " --version      Show version of this tool"
-        _agcc-msg " - or --        Means the end of options and next arg is CMD. But if nothing "
+        _agcc-msg " -|--           Means the end of options and next arg is CMD. But if nothing "
         _agcc-msg "                followed, then just print output the bin dir(slash ended)."
         _agcc-msg "--------------------------------------------------------------------------------"
         _agcc-msg "CMD and ARGS: The external command to be run"
@@ -157,53 +161,7 @@ if [[ ! $CMD ]]; then
         _agcc-msg "                To avoid ambiguous with other option, place - or -- before CMD"
         _agcc-msg " ARGS...        The arguments for the CMD"
         _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "Output"
-        _agcc-msg ""
-        _agcc-msg "If end with - or --, then it output the bin dir(slash ended). e.g."
-        _agcc-msg " \"\$NDK/std-toolchains/android-9-arm/bin/\""
-        _agcc-msg ""
-        _agcc-msg "Otherwise no output to stdout from the tool itself, but output some guide text"
-        _agcc-msg "to stderr when run default command(bash) interactively."
-        _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "About where the toolchain created"
-        _agcc-msg ""
-        _agcc-msg "This tool create dir in your NDK dir, in following format:"
-        _agcc-msg " \"\$NDK/std-toolchains/android-APIL-ARCH[STL_TAG]\""
-        _agcc-msg "This is not only for easy management, but also for keep some commands work."
-        _agcc-msg " e.g. ndk-gdb, ndk-which... call neighbour files from \$NDK/SOME_DIR level."
-        _agcc-msg " When in Redirect Mode, such commands is called into the toolchain's one."
-        _agcc-msg " To keep them works same as previous, i have to choose such a dir hierarchy."
-        _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "About env vars passed to CMD"
-        _agcc-msg ""
-        _agcc-msg "PATH: will be changed under certain conditions(redirect or hack). "
-        _agcc-msg "  When called recursively, it will be restored first"
-        _agcc-msg ""
-        _agcc-msg "GYP_DEFINES: will be set to \"host_os=<mac|linux>\" to specify host_os for gyp."
-        _agcc-msg ""
-        _agcc-msg "BIN AGCC_BIN AGCC_HACK_DIR: will be set for cleaner and as mnemonics."
-        _agcc-msg ""
-        _agcc-msg "Following vars will be set for specified Env Mode, otherwise cleared:"
-        _agcc-msg " CC CXX LINK AR CC_target CXX_target LINK_target AR_target"
-        _agcc-msg " AS RANLIB LD STRIP NM AS_target RANLIB_target LD_target STRIP_target NM_target"
-        _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "About Redirect Mode (Run command without -c or -C)"
-        _agcc-msg ""
-        _agcc-msg "In this mode, the following commands are redirected to the toolchain's one."
-        _agcc-msg " cc(->gcc) gcc g++ c++ cpp clang clang++ yasm ar as ranlib ld strip ..."
-        _agcc-msg " readelf objdump nm c++filt elfedit objcopy strings size ..."
-        _agcc-msg " gdb addr2line gcov gprof gcore dwp ..."
-        _agcc-msg " llvm-as llvm-dis llvm-link FileCheck ..."
-        _agcc-msg " ndk-depends ndk-gdb ndk-which ndk-stack ..."
-        _agcc-msg ""
-        _agcc-msg "In this mode, the following commands come from toolchain are also available:"
-        _agcc-msg " python make awk... But not the first choice in \$PATH"
-        _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "About Hack mode (--hack, with -c or -C)"
-        _agcc-msg ""
-        "$0" --help-hack
-        _agcc-msg "--------------------------------------------------------------------------------"
-        _agcc-msg "Examples"
+        _agcc-msg "Quick examples"
         _agcc-msg ""
         _agcc-msg "#### print toolchain bin dir(slash ended)"
         _agcc-msg "android-gcc-toolchain -                                   #for arm(32bit)"
@@ -225,21 +183,17 @@ if [[ ! $CMD ]]; then
         _agcc-msg "#### cross-compile ffmpeg with cross-prefix=\`android-gcc-toolchain arm64 -\`"
         _agcc-msg "./configure --enable-cross-compile --cross-prefix=\`android-gcc-toolchain arm64 -\` --arch=arm64 --target-os=linux"
         _agcc-msg ""
-        _agcc-msg "#### cross-compile nodejs with \$CC_target... ready and some hacks (on Mac)"
-        _agcc-msg "android-gcc-toolchain arm64 --hack ar-dual-os,gcc-no-librt -C <<< \"./configure --dest-cpu=arm64 --dest-os=android && make\""
+        _agcc-msg "#### cross-compile nodejs with \$CC_target... ready and host compiler rules applied forcibly (on Mac)"
+        _agcc-msg "android-gcc-toolchain arm64 --host ar-dual-os,gcc-no-librt -C <<< \"./configure --dest-cpu=arm64 --dest-os=android && make\""
         _agcc-msg ""
-        _agcc-msg "#### use Here Document to feed commands, compared to above Here String."
-        _agcc-msg "android-gcc-toolchain arm64 --hack ar-dual-os,gcc-no-librt -C <<EOF"
-        _agcc-msg "\"./configure --dest-cpu=arm64 --dest-os=android && make\""
-        _agcc-msg "EOF"
-        _agcc-msg ""
+        _agcc-msg "See README.md, https://github.com/sjitech/android-gcc-toolchain"
         exit 0
         ;;
-    --help-hack)
-        _agcc-msg "You can combine following hack options (join by comma):"
+    --help-host)
+        _agcc-msg "Available host compiler rules:"
         for d1 in "$hackDir"/*; do
             [[ $d1 == *\** ]] && break
-            [[ $d1 == */ccache ]] && continue
+            [[ $d1 == */--ccache ]] && continue;
             msg=""
             for d2 in "$d1"/*; do
                 [[ $d2 == *\** ]] && break
@@ -254,6 +208,7 @@ if [[ ! $CMD ]]; then
                 _agcc-msg " $msg"
             fi
         done
+        _agcc-msg "See README.md, https://github.com/sjitech/android-gcc-toolchain#host-option"
         exit 0
         ;;
     --version)
@@ -295,7 +250,7 @@ esac
 #check Android API level
 case ${APIL:=min} in
     min|max)
-        [[ ! $NDK ]] && { _agcc-msg "\$NDK is empty. Can not guess from \$ANDROID_NDK_ROOT, \$ANDROID_SDK_HOME,... Please run: export NDK=__the_top_dir_of_installed_NDK__"; exit 1; }
+        [[ ! $NDK ]] && { _agcc-msg "\$NDK not set. Can not guess from \$ANDROID_NDK_ROOT, \$ANDROID_SDK_HOME,... Please run: export NDK=__the_top_dir_of_installed_NDK__"; exit 1; }
         dirPrefix=$NDK/platforms/android-
         dirSuffix=/arch-$ARCH
         dirList=() #save ordered dir list
@@ -304,6 +259,8 @@ case ${APIL:=min} in
         tmpList=("$dirPrefix"?$dirSuffix)
         [[ ${tmpList[0]} != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
         tmpList=("$dirPrefix"??$dirSuffix)
+        [[ ${tmpList[0]} != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
+        tmpList=("$dirPrefix"???$dirSuffix)
         [[ ${tmpList[0]} != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
 
         #get first or last dir name, e.x. ...android-9/arch-... or ...android-24/arch-...
@@ -317,7 +274,7 @@ case ${APIL:=min} in
         APIL=${APIL#$dirPrefix}
         APIL=${APIL%$dirSuffix}
 
-        [[ ! $APIL ]] && { _agcc-msg "$dirPrefix*$dirSuffix not found"; exit 1; }
+        [[ ! $APIL ]] && { _agcc-msg "invalid NDK. The platforms/android-*/arch-$ARCH not found at \$NDK(\"$NDK\")"; exit 1; }
         ;;
     *[!0-9]*)
         _agcc-msg "invalid Android API level \"$APIL\". Must be min(default)|max|an integer"; exit 1
@@ -339,35 +296,38 @@ if [[ $CMD != - ]]; then
     if [[ $CCACHE ]]; then
         type -p ccache > /dev/null || { _agcc-msg "ccache not found in \$PATH"; exit 1; }
     elif [[ $USE_CCACHE == 1 ]]; then
-        type -p ccache > /dev/null && CCACHE=ccache || _agcc-msg "\$USE_CCACHE=$USE_CCACHE but ccache is not found in \$PATH"
+        type -p ccache > /dev/null && CCACHE=--ccache || _agcc-msg "\$USE_CCACHE=$USE_CCACHE but ccache is not found in \$PATH"
     fi
 fi
 
 ################################################################################
-#check HACK mode if to run command
+#check host compiler rules if to run command
+if [[ $HACK || ( $CCACHE && $ENV_MODE == -C ) ]]; then
+    [[ $ENV_MODE != -C ]] && { _agcc-msg "--host option must be used with -C option"; exit 1; }
 
-if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
-
-    #ugly: treat -C anywhere as ENV_MODE -C, so avoid following incredible validation error
-    [[ ! $ENV_MODE ]] && for arg in "$@"; do [[ $arg == -c || $arg == -C ]] && ENV_MODE=$arg && break; done
-    [[ ! $ENV_MODE ]] && { _agcc-msg "--hack option must be used with -c or -C option"; exit 1; }
-
-    hoList=(${HACK//,/ }) #replace comma with space, then turn to a array
-    [[ $HACK && ! ${hoList[0]} ]] && { _agcc-msg "invalid hack options \"$HACK\". Use --help-hack to show available options"; exit 1; }
+    hoList=()
+    if [[ $HACK ]]; then
+        #replace comma with space, then convert to array,
+        # then strip prefix "--" of each items to prevent internal host compiler rule from being specified.
+        hoList=(${HACK//,/ }); hoList=("${hoList[@]#--}");
+        # remote empty items
+        hoList=(${hoList[@]})
+        [[ ! ${hoList[0]} ]] && { _agcc-msg "invalid host compiler rules \"$HACK\". Use --help-host to show available rules"; exit 1; }
+    fi
 
     function already_checked { local ho; for ho in "${HACK_LIST[@]}"; do [[ $1 == $ho ]] && return 0; done; return 1; }
 
-    #append "ccache" to hack option list. [[ $ind == ${#hoList[@]} ]] means is checking the last ccache appended by --ccache option.
-    ind=-1
-    for ho in "${hoList[@]}" ${CCACHE#--}; do
-        ((ind++))
-        [[ $ho == /* || $ho == */ || $ho == */*/* || ! -d $hackDir/$ho ]] && { _agcc-msg "invalid hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
+    #append internal host compiler rule "--ccache" to list.
+    #check each item of the combined list, finally produce a output list such as:
+    #( ar-dual-os/gcc ar-dual-os/g++ ...)
+    for ho in "${hoList[@]}" $CCACHE; do
+        [[ $ho == /* || $ho == */ || $ho == */*/* || ! -d $hackDir/$ho ]] && { _agcc-msg "invalid host compiler rule \"$ho\". Use --help-host to show available rules"; [[ $ho == --ccache ]] && continue; exit 1; }
 
-        if [[ $ho == */* ]]; then #?* means at least 1 char
+        if [[ $ho == */* ]]; then
             dirList=("$hackDir/$ho")
         else
             dirList=("$hackDir/$ho"/*)
-            [[ ${dirList[0]} == *\** ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
+            [[ ${dirList[0]} == *\** ]] && { _agcc-msg "unavailable host compiler rule \"$ho\". Use --help-host to show available rules"; [[ $ho == --ccache ]] && continue; exit 1; }
         fi
 
         ok=""
@@ -375,16 +335,11 @@ if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
             exeName=${d2##*/}  #gcc-no-lrt/gcc -> gcc
             if [[ -x $d2/$exeName ]] || chmod a+x "$d2/$exeName" 2>/dev/null; then
                 ok=YES
-                #when specified --ccache option, ensure ccache/* put to last of hack option list
-                if [[ $CCACHE && $d2 == */ccache/* ]]; then
-                    [[ $ind == ${#hoList[@]} ]] && HACK_LIST[${#HACK_LIST[@]}]=$d2
-                else
-                    already_checked "$d2" || HACK_LIST[${#HACK_LIST[@]}]=$d2
-                fi
+                already_checked "$d2" || HACK_LIST[${#HACK_LIST[@]}]=$d2
             fi
         done
 
-        [[ ! $ok ]] && { _agcc-msg "unavailable hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
+        [[ ! $ok ]] && { _agcc-msg "unavailable host compiler rule \"$ho\". Use --help-host to show available rules"; [[ $ho == --ccache ]] && continue; exit 1; }
     done
 
     #remove hackDir/ from every item
@@ -412,57 +367,78 @@ fi
 
 ################################################################################
 #create or check standalone toolchain
-[[ ! $NDK ]] && { _agcc-msg "\$NDK is empty. Can not guess from \$ANDROID_NDK_ROOT, \$ANDROID_SDK_HOME,... Please run: export NDK=__the_top_dir_of_installed_NDK__"; exit 1; }
+[[ ! $NDK ]] && { _agcc-msg "\$NDK is not set. Can not guess from \$ANDROID_NDK_ROOT, \$ANDROID_SDK_HOME,... Please run: export NDK=__the_top_dir_of_installed_NDK__"; exit 1; }
 NAME=android-$APIL-$ARCH$STL_TAG
 DIR=$NDK/std-toolchains/$NAME
 BIN=$DIR/bin
 
-if [[ ! -d $DIR || $FORCE ]]; then
-    if [[ -d $DIR || $FORCE ]]; then
-        _agcc-msg "Make \$NDK/std-toolchains/$NAME forcibly"
-    else
-        _agcc-msg "Make \$NDK/std-toolchains/$NAME because it does not exists..."
-    fi
+#the $NDK/prebuilt/*/bin contains python make awk,
+# append it to $PATH to ensure python can be found even if no existing one
+fileList=("$NDK"/prebuilt/*/bin/python)
+[[ ${fileList[0]} == *\** ]] && { _agcc-msg "invalid NDK. The prebuilt/*/bin/python not found at \$NDK(\"$NDK\")"; exit 1; }
+PREBUILT_BIN=${fileList[0]%/*} #get dir
+_agcc-dbg "NDK prebuilt bin dir confirmed: \"$PREBUILT_BIN\""
+if [[ $PATH != *:$PREBUILT_BIN:* && $PATH != *:$PREBUILT_BIN && $PATH != $PREBUILT_BIN:* ]]; then
+    export PATH=$PATH:$PREBUILT_BIN
+    _agcc-dbg "appended to \$PATH"
+else
+    _agcc-dbg "already in \$PATH"
+fi
 
-    PYTHON=python
-    if ! type -p python; then
-        PYTHON=("$NDK"/prebuilt/*/bin/python)
-        [[ $PYTHON == "$NDK/prebuilt/*/bin/python" ]] && { _agcc-msg "python not found in \$PATH and \$NDK/prebuilt/*/bin"; exit 1; }
-    fi
-    _agcc-dbg "use \"$PYTHON\""
+if [[ ! -d $DIR || $FORCE ]]; then
+    _agcc-msg "Make std-toolchains/$NAME at \$NDK(\"$NDK\")"
 
     PY_FILE=$NDK/build/tools/make_standalone_toolchain.py
     if [[ $COPY ]]; then
-        "$PYTHON" "$PY_FILE" --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
+        "$PY_FILE" --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
     else
         #use hard link as possible. Use customized copy2 and copytree to replace shutil.copy2 and shutil.copytree
-        VERBOSE=$VERBOSE PY_FILE=$PY_FILE "$PYTHON" <(
+        VERBOSE=$VERBOSE PY_FILE=$PY_FILE python <(
             cat "$thisDir/fast-copy/func.py"
             sed "s/__file__/os.environ['PY_FILE']/g;s/shutil\.copy2/copy2/g;s/shutil\.copytree/copytree/g" "$PY_FILE"
         ) --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
     fi
 
-    if [[ -e "$BIN/$ARCH_PREFIX"gcc ]]; then
+    if [[ -x "$BIN/$ARCH_PREFIX"gcc ]]; then
         _agcc-msg "Done"
         _agcc-msg ""
     else
-        _agcc-msg "Failed to create NDK standalone toolchain."
+        _agcc-msg "Failed to create toolchain."
+        _agcc-msg "Please use --force --verbose to recreate toolchain."
         _agcc-msg ""
         exit 1
     fi
-else
-    ls "$BIN/$ARCH_PREFIX"gcc > /dev/null || exit 1
+elif [[ ! -x "$BIN/$ARCH_PREFIX"gcc ]]; then
+    _agcc-msg "invalid toolchain. The std-toolchains/$NAME/bin/${ARCH_PREFIX}gcc not found at \$NDK(\"$NDK\")."
+    _agcc-msg "Please use --force --verbose to recreate toolchain."
+    _agcc-msg ""
+    exit 1
 fi
 
-#do not want toolchain's make awk python take precedence of existing one. So move it to ../tools
-[[ -f "$BIN"/idle ]] \
-&& mv "$BIN"/make "$BIN"/python* "$BIN"/pydoc "$BIN"/awk "$BIN"/smtpd.py "$BIN"/2to3 "$BIN"/idle "$BIN"/../tools/ 2>/dev/null
+#make some symbol-links such as gcc @-> arm-linux-androideabi-gcc, also link cc @-> gcc
+if [[ ! -f $BIN/.symbol_linked ]]; then
+    for f in "$BIN"/$ARCH_PREFIX*; do
+        s=${f##*$ARCH_PREFIX}; #$BIN/arm-linux-androideabi-gcc -> gcc
+        [[ ! -e $BIN/$s && -x $f ]] && ln -s "$ARCH_PREFIX$s" "$BIN/$s"
+    done
+    [[ ! -e $BIN/cc ]] && ln -s ${ARCH_PREFIX}gcc "$BIN/cc"
+    touch "$BIN/.symbol_linked"
+fi
+
+#do not want toolchain's python make awk take precedence of existing one.
+# So remove them. They are provided at $NDK/prebuilt/*/bin which are already appended to $PATH
+if [[ ! -f $BIN/.python_make_awk_removed ]]; then
+    for f in "$PREBUILT_BIN"/*; do
+        [[ -f $f ]] && rm -f "$BIN/${f##*/}"
+    done
+    touch "$BIN/.python_make_awk_removed"
+fi
 
 #fix possible bug of android-mips: g++ -mips32r2 option cause error "bits/c++config.h" not found.
 #so merge bits/*.h to standard place
 if [[ $ARCH == mips && ! -f $BIN/../.bits_h_merged ]]; then
-    ln -f "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/ \
-    && touch "$BIN/../.bits_h_merged"
+    ln -f "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/
+    touch "$BIN/../.bits_h_merged"
 fi
 
 #build gcc wrapper for ccache
@@ -473,14 +449,6 @@ if [[ $CCACHE && ! -f "$BIN"/../ccache/gcc ]]; then
         exec ccache \"\${0%/*}/../bin/$f\" \"\$@\"" && chmod a+x "$BIN"/../ccache/$f
     done
 fi
-
-################################################################################
-#make some symbol-link such as gcc @-> arm-linux-androideabi-gcc
-#also link cc @-> gcc
-pushd "$BIN" > /dev/null
-    for f in $ARCH_PREFIX*; do s=${f/$ARCH_PREFIX}; [[ ! -e $s && -x $f ]] && ln -s "$f" "$s"; done
-    [[ ! -e cc ]] && ln -s "$ARCH_PREFIX"gcc cc
-popd > /dev/null
 
 ################################################################################
 #if end with dash, then just print bin path(slash ended)
@@ -516,24 +484,7 @@ if [[ $AGCC_BIN ]]; then
     PATH=${PATH#$d:}        #remove   dir: from head
     PATH=${PATH%:$d}        #remove  :dir  from tail
 
-    if [[ $GUIDE && $oldStr != $PATH ]]; then
-        [[ $GUIDE != havePrintedAGCC_BIN ]] && GUIDE=havePrintedAGCC_BIN && \
-        _agcc-guide "Undo \$PATH changes from previous toolchain with \$AGCC_BIN" && _agcc-guide "\"${AGCC_BIN/#$NDK/\$NDK}\""
-        _agcc-guide "Removed previous \$AGCC_BIN from \$PATH."
-    fi
-
-    [[ $GUIDE ]] && oldStr=$PATH
-
-    d=$AGCC_BIN/../tools
-    PATH=${PATH//:$d:/:}    #replace :dir: with :
-    PATH=${PATH#$d:}        #remove   dir: from head
-    PATH=${PATH%:$d}        #remove  :dir  from tail
-
-    if [[ $GUIDE && $oldStr != $PATH ]]; then
-        [[ $GUIDE != havePrintedAGCC_BIN ]] && GUIDE=havePrintedAGCC_BIN && \
-        _agcc-guide "Undo \$PATH changes from previous toolchain with \$AGCC_BIN" && _agcc-guide "\"${AGCC_BIN/#$NDK/\$NDK}\""
-        _agcc-guide "Removed previous \$AGCC_BIN/../tools from \$PATH."
-    fi
+    [[ $GUIDE && $oldStr != $PATH ]] && _agcc-guide "PATH-=$AGCC_BIN"
 
     [[ $GUIDE ]] && oldStr=$PATH
 
@@ -542,11 +493,7 @@ if [[ $AGCC_BIN ]]; then
     PATH=${PATH#$d:}        #remove   dir: from head
     PATH=${PATH%:$d}        #remove  :dir  from tail
 
-    if [[ $GUIDE && $oldStr != $PATH ]]; then
-        [[ $GUIDE != havePrintedAGCC_BIN ]] && GUIDE=havePrintedAGCC_BIN && \
-        _agcc-guide "Undo \$PATH changes from previous toolchain with \$AGCC_BIN" && _agcc-guide "\"${AGCC_BIN/#$NDK/\$NDK}\""
-        _agcc-guide "Removed previous \$AGCC_BIN/../ccache from \$PATH."
-    fi
+    [[ $GUIDE && $oldStr != $PATH ]] && _agcc-guide "PATH-=$AGCC_BIN/../ccache"
 fi
 unset AGCC_BIN
 
@@ -563,11 +510,7 @@ if [[ $AGCC_HACK_DIR ]]; then
         PATH=${PATH#$d:}        #remove   dir: from head
         PATH=${PATH%:$d}        #remove  :dir  from tail
 
-        if [[ $GUIDE && $oldStr != $PATH ]]; then
-            [[ $GUIDE != havePrintedAGCC_HACK_DIR ]] && GUIDE=havePrintedAGCC_HACK_DIR && \
-            _agcc-guide "Undo hack from previous toolchain with \$AGCC_HACK_DIR" && _agcc-guide "\"$AGCC_HACK_DIR\""
-            _agcc-guide "[-]Removed ${d/#$AGCC_HACK_DIR/\$AGCC_HACK_DIR} from \$PATH."
-        fi
+        [[ $GUIDE && $oldStr != $PATH ]] && _agcc-guide "PATH-=$d"
     done
 fi
 unset AGCC_HACK_DIR
@@ -593,9 +536,6 @@ fi
 
 ################################################################################
 
-#append $BIN/../tools to $PATH so python make awk can be used if no existing one
-export PATH=$PATH:$BIN/../tools
-
 #set gyp host_os to explicitly set it so correctly choose source files
 case $OSTYPE in
     darwin*) export GYP_DEFINES="host_os=mac" ;;
@@ -606,7 +546,7 @@ esac
 #if $NDK contains spaces, then should be quoted in $CC... $CC_target...
 q=""; Q=""; [[ $NDK == *\ * ]] && q=\" && Q=\\\"
 
-CCACHE_PREFIX=""; CCACHE_PREFIX_=""; [[ $CCACHE ]] && CCACHE_PREFIX="ccache " && CCACHE_PREFIX_="ccache\\ " 
+CCACHE_PREFIX=""; CQ=""; [[ $CCACHE ]] && CCACHE_PREFIX="ccache " && CQ=\"
 
 case $ENV_MODE in
 ################################################################################
@@ -615,19 +555,13 @@ case $ENV_MODE in
     [[ $CCACHE ]] && export PATH=$BIN/../ccache:$PATH
 
     if [[ $GUIDE ]]; then
-        _agcc-guide "Prepended to \$PATH. So you can use these commands (First choice):"
-        _agcc-guide " cc(->gcc) gcc g++ c++ cpp clang clang++ yasm ld ar as ranlib strip ..."
+        _agcc-guide "PATH=\$BIN:\$PATH. Toolchain commands can be used directly:"
+        _agcc-guide " cc(->gcc) gcc g++ c++ cpp clang clang++ ld ar as ranlib strip ..."
         _agcc-guide " readelf objdump nm c++filt elfedit objcopy strings size ..."
-        _agcc-guide " gdb addr2line gcov gprof gcore dwp yasm ..."
+        _agcc-guide " addr2line gcov gprof gcore dwp..."
         _agcc-guide " llvm-as llvm-dis llvm-link FileCheck ..."
-        _agcc-guide " ndk-depends ndk-gdb ndk-which ndk-stack ..."
-        _agcc-guide "As a fallback, ../tools(python make awk...) are appended to \$PATH."
+        [[ $CCACHE ]] && _agcc-guide "PATH=\$BIN/../ccache:\$PATH. The gcc,g++,cc,c++ will run via ccache."
         _agcc-guide ""
-        if [[ $CCACHE ]]; then
-            _agcc-guide "Prepended \$BIN/../ccache to \$PATH, the ccache's gcc... supersede all above."
-            _agcc-guide " cc gcc g++ c++ cpp clang clang++"
-            _agcc-guide ""
-        fi
 
         #change prompt
         PS1="[$NAME] ";
@@ -647,9 +581,9 @@ case $ENV_MODE in
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Following env vars have been exported:"
-        _agcc-guide " export CC=$CCACHE_PREFIX_$Q\$BIN/gcc$Q"
-        _agcc-guide " export CXX=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
-        _agcc-guide " export LINK=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
+        _agcc-guide " export CC=$CQ$CCACHE_PREFIX$Q\$BIN/gcc$Q$CQ"
+        _agcc-guide " export CXX=$CQ$CCACHE_PREFIX$Q\$BIN/g++$Q$CQ"
+        _agcc-guide " export LINK=$CQ$CCACHE_PREFIX$Q\$BIN/g++$Q$CQ"
         _agcc-guide " export AR=$Q\$BIN/ar$Q"
         _agcc-guide " export AS=$Q\$BIN/as$Q"
         _agcc-guide " export RANLIB=$Q\$BIN/ranlib$Q"
@@ -676,9 +610,9 @@ case $ENV_MODE in
 
     if [[ $GUIDE ]]; then
         _agcc-guide "Following env vars have been exported:"
-        _agcc-guide " export CC_target=$CCACHE_PREFIX_$Q\$BIN/gcc$Q"
-        _agcc-guide " export CXX_target=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
-        _agcc-guide " export LINK_target=$CCACHE_PREFIX_$Q\$BIN/g++$Q"
+        _agcc-guide " export CC_target=$CQ$CCACHE_PREFIX$Q\$BIN/gcc$Q$CQ"
+        _agcc-guide " export CXX_target=$CQ$CCACHE_PREFIX$Q\$BIN/g++$Q$CQ"
+        _agcc-guide " export LINK_target=$CQ$CCACHE_PREFIX$Q\$BIN/g++$Q$CQ"
         _agcc-guide " export AR_target=$Q\$BIN/ar$Q"
         _agcc-guide " export AS_target=$Q\$BIN/as$Q"
         _agcc-guide " export RANLIB_target=$Q\$BIN/ranlib$Q"
@@ -692,17 +626,16 @@ case $ENV_MODE in
     fi
 
     ################################################################################
-    #do some optional hack for compiler
+    #Supersede host compiler by prioritized wrappers in $PATH
     if [[ ${#HACK_LIST[@]} -gt 0 ]]; then
         #save hack dir for cleaner
         export AGCC_HACK_DIR=$hackDir
 
-        [[ $GUIDE ]] && _agcc-guide "Hacking host(local) compiler commands with \$AGCC_HACK_DIR" && _agcc-guide "\"$hackDir\""
         ((i=${#HACK_LIST[@]}-1))
         while ((i>=0)); do
-            ho=${HACK_LIST[$i]}; exeName=${ho##*/}
+            ho=${HACK_LIST[$i]}
             export PATH=$hackDir/$ho:$PATH
-            [[ $GUIDE ]] && _agcc-guide "[+]\$AGCC_HACK_DIR/$ho/$exeName supersede $exeName in \$PATH"
+            [[ $GUIDE ]] && _agcc-guide "PATH=$hackDir/$ho:\$PATH"
             ((i--))
         done
         [[ $GUIDE ]] && _agcc-guide ""
@@ -713,8 +646,7 @@ case $ENV_MODE in
 esac
 
 ################################################################################
-#finally, call CMD
-
+#finally, call CMD or bash
 if [[ $INTER_BASH ]]; then
     #forcibly set my prompt ($PS1) via an on-fly init-file yet simulate interactive non-login bash
     exec /bin/bash --init-file <(
