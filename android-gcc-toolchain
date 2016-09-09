@@ -1,7 +1,9 @@
 #!/bin/bash
 function _agcc-msg { echo "$@" >&2; }
-function _agcc-dbg { [[ $AGCC_DBG ]] && echo "$@" >&2; }
+function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
 function _agcc-guide { echo "" "$@" >&2; }
+
+VERSION=1.7.6
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
 _agcc-dbg "thisDir: \"$thisDir\""
@@ -69,11 +71,11 @@ while [[ $# -gt 0 ]]; do
             shift; while [[ $# -gt 0 && ! $1 ]]; do shift; done
             [[ $1 == --help* ]] && break
             [[ $1 == -* ]] && { _agcc-msg "no valid external command after - or --"; exit 1; }
-            CMD=${1:--}; _agcc-dbg " CMD=\"$CMD\""  #if not specified, treated as special command "-"
+            CMD=$1; [[ ! $CMD ]] && CMD=-; _agcc-dbg " CMD=\"$CMD\""
             shift
             break
             ;;
-    --help*)
+    --help*|--version)
             break
             ;;
     --*)
@@ -101,8 +103,9 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-if [[ ! $CMD && $1 == --help* ]]; then
-    if [[ $1 == --help ]]; then
+if [[ ! $CMD ]]; then
+    case $1 in
+    --help)
         _agcc-msg "Use or create toolchain, set env and run command, or print \"the bin dir/\"."
         _agcc-msg "${0##*/} [OPTIONS] [CMD [ARGS...]]"
         _agcc-msg "--------------------------------------------------------------------------------"
@@ -134,6 +137,7 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg " --ccache       Speed up compilation by CCACHE. This will wrap android gcc..."
         _agcc-msg "                or \$CC... or \$CC_target... with ccache. When in -c or -C mode,"
         _agcc-msg "                this implies appending a host-side hack option \"ccache\"."
+        _agcc-msg "                If \$USE_CCACHE is 1 then this option is implied."
         _agcc-msg ""
         _agcc-msg "Hack options:"
         _agcc-msg " --hack  HACK   Hack host(local) compiler commands. Must be combination of"
@@ -141,10 +145,10 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg "                This option only works for -c or -C option."
         _agcc-msg "                For detail, refer to \"About Hack mode\" section."
         _agcc-msg ""
-        _agcc-msg "Special options:"
-        _agcc-msg " -              Means the end of options and next arg is CMD. But if nothing "
+        _agcc-msg "Other options:"
+        _agcc-msg " --version      Show version of this tool"
+        _agcc-msg " - or --        Means the end of options and next arg is CMD. But if nothing "
         _agcc-msg "                followed, then just print output the bin dir(slash ended)."
-        _agcc-msg " --             Same as -"
         _agcc-msg "--------------------------------------------------------------------------------"
         _agcc-msg "CMD and ARGS: The external command to be run"
         _agcc-msg ""
@@ -224,17 +228,18 @@ if [[ ! $CMD && $1 == --help* ]]; then
         _agcc-msg "#### cross-compile nodejs with \$CC_target... ready and some hacks (on Mac)"
         _agcc-msg "android-gcc-toolchain arm64 --hack ar-dual-os,gcc-no-librt -C <<< \"./configure --dest-cpu=arm64 --dest-os=android && make\""
         _agcc-msg ""
-        _agcc-msg "#### use \`Here Document\` to feed commands, compared to above \`Here String\`."
+        _agcc-msg "#### use Here Document to feed commands, compared to above Here String."
         _agcc-msg "android-gcc-toolchain arm64 --hack ar-dual-os,gcc-no-librt -C <<EOF"
         _agcc-msg "\"./configure --dest-cpu=arm64 --dest-os=android && make\""
         _agcc-msg "EOF"
         _agcc-msg ""
-
-    elif [[ $1 == --help-hack ]]; then
-    
+        exit 0
+        ;;
+    --help-hack)
         _agcc-msg "You can combine following hack options (join by comma):"
         for d1 in "$hackDir"/*; do
             [[ $d1 == *\** ]] && break
+            [[ $d1 == */ccache ]] && continue
             msg=""
             for d2 in "$d1"/*; do
                 [[ $d2 == *\** ]] && break
@@ -249,12 +254,16 @@ if [[ ! $CMD && $1 == --help* ]]; then
                 _agcc-msg " $msg"
             fi
         done
-    fi
-    
-    exit 1
+        exit 0
+        ;;
+    --version)
+        _agcc-msg $VERSION
+        exit 0
+        ;;
+    esac
 fi
 
-if [[ $AGCC_DBG ]]; then
+if [[ $AGCC_DBG == 1 ]]; then
     _agcc-dbg "args {"
     _agcc-dbg " ARCH     \"$ARCH\""
     _agcc-dbg " APIL     \"$APIL\""
@@ -325,6 +334,16 @@ case ${STL:=gnustl} in
 esac
 
 ################################################################################
+#check CCACHE if to run command
+if [[ $CMD != - ]]; then
+    if [[ $CCACHE ]]; then
+        type -p ccache > /dev/null || { _agcc-msg "ccache not found in \$PATH"; exit 1; }
+    elif [[ $USE_CCACHE == 1 ]]; then
+        type -p ccache > /dev/null && CCACHE=ccache || _agcc-msg "\$USE_CCACHE=$USE_CCACHE but ccache is not found in \$PATH"
+    fi
+fi
+
+################################################################################
 #check HACK mode if to run command
 
 if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
@@ -334,14 +353,14 @@ if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
     [[ ! $ENV_MODE ]] && { _agcc-msg "--hack option must be used with -c or -C option"; exit 1; }
 
     hoList=(${HACK//,/ }) #replace comma with space, then turn to a array
-    [[ ! ${hoList[0]} ]] && { _agcc-msg "invalid hack options \"$HACK\". Use --help-hack to show available options"; exit 1; }
+    [[ $HACK && ! ${hoList[0]} ]] && { _agcc-msg "invalid hack options \"$HACK\". Use --help-hack to show available options"; exit 1; }
 
     function already_checked { local ho; for ho in "${HACK_LIST[@]}"; do [[ $1 == $ho ]] && return 0; done; return 1; }
 
     #append "ccache" to hack option list. [[ $ind == ${#hoList[@]} ]] means is checking the last ccache appended by --ccache option.
-    [[ $CCACHE ]] && ind=-1
+    ind=-1
     for ho in "${hoList[@]}" ${CCACHE#--}; do
-        [[ $CCACHE ]] && ((ind++))
+        ((ind++))
         [[ $ho == /* || $ho == */ || $ho == */*/* || ! -d $hackDir/$ho ]] && { _agcc-msg "invalid hack option \"$ho\". Use --help-hack to show available options"; [[ $ind == ${#hoList[@]} ]] && continue; exit 1; }
 
         if [[ $ho == */* ]]; then #?* means at least 1 char
@@ -373,7 +392,7 @@ if [[ $HACK || ( $CCACHE && $ENV_MODE ) ]]; then
 fi
 
 ################################################################################
-if [[ $AGCC_DBG ]]; then
+if [[ $AGCC_DBG == 1 ]]; then
     _agcc-dbg "args {"
     _agcc-dbg " ARCH     \"$ARCH\""
     _agcc-dbg " APIL     \"$APIL\""
@@ -405,7 +424,8 @@ if [[ ! -d $DIR || $FORCE ]]; then
         _agcc-msg "Make \$NDK/std-toolchains/$NAME because it does not exists..."
     fi
 
-    if ! PYTHON=`which python`; then
+    PYTHON=python
+    if ! type -p python; then
         PYTHON=("$NDK"/prebuilt/*/bin/python)
         [[ $PYTHON == "$NDK/prebuilt/*/bin/python" ]] && { _agcc-msg "python not found in \$PATH and \$NDK/prebuilt/*/bin"; exit 1; }
     fi
@@ -478,12 +498,6 @@ fi
 
 
 
-
-################################################################################
-#check ccache
-if [[ $CCACHE ]]; then
-    which ccache > /dev/null || { _agcc-msg "ccache not found in \$PATH"; exit 1; }
-fi
 
 ################################################################################
 #check verbose mode or interactive bash just for show guide and prompt

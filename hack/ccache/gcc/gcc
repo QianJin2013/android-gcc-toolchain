@@ -1,10 +1,10 @@
 #!/bin/bash
 EXE_NAME=${0##*/}
 function _agcc-msg { echo "[ccache-$EXE_NAME]" "$@" >&2; }
-function _agcc-dbg { [[ $AGCC_DBG ]] && _agcc-msg "$@"; }
+function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && _agcc-msg "$@"; }
 
 ###############################################################################
-#Search the exe behind me in $PATH. Faster than using `which -a $EXE_NAME`.
+#Search the exe behind me in $PATH. Even faster than {for f in `type -ap name`}
 
 case $EXE_NAME in
 cc) ALT_EXE_NAME="gcc";;
@@ -19,7 +19,7 @@ IFS=: pathList=($PATH); unset IFS  #split $PATH by :, save to array
 for name in $EXE_NAME $ALT_EXE_NAME; do
     EXE_PATH=""; foundMyself=""
     for d in "${pathList[@]}"; do
-        if [[ -f $d/$name ]]; then
+        if [[ -x $d/$name ]]; then
             if [[ $d/$name -ef "$0" ]]; then #is it actually myself? (symbol link also works)
                 foundMyself=YES
             elif [[ $foundMyself ]]; then
