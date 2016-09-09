@@ -95,10 +95,10 @@ Hack options:
                 This option only works for -c or -C option.
                 For detail, refer to "About Hack mode" section.
 
-Special options:
- -              Means the end of options and next arg is CMD. But if nothing 
+Other options:
+ --version      Show version of this tool
+ - or --        Means the end of options and next arg is CMD. But if nothing 
                 followed, then just print output the bin dir(slash ended).
- --             Same as -
 --------------------------------------------------------------------------------
 CMD and ARGS: The external command to be run
 
