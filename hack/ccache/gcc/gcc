@@ -4,7 +4,7 @@ function _agcc-msg { echo "[ccache-$EXE_NAME]" "$@" >&2; }
 function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && _agcc-msg "$@"; }
 
 ###############################################################################
-#Search the exe behind me in $PATH. Faster than using `which -a $EXE_NAME`.
+#Search the exe behind me in $PATH. Even faster than {for f in `type -ap name`}
 
 case $EXE_NAME in
 cc) ALT_EXE_NAME="gcc";;
