@@ -1,7 +1,7 @@
 # android-gcc-toolchain
 Enable you to use NDK's standalone toolchain easily, quickly and magically for cross-compile.
 
-As an example, see [Build NodeJS for Android perfectly](#build-nodejs-for-android-perfectly).
+As an example, see [Build NodeJS for Android perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
 
 Tested OS:
 - **Mac**: OS X 10.11.5/10.11.6 EI Capitan (64bit)
@@ -29,6 +29,18 @@ Otherwise, it will guess NDK dir from env vars: ANDROID_NDK_ROOT ANDROID_NDK_HOM
 
 Nothing. Just use the `android-gcc-toolchain` with full path, 
 otherwise link it to /usr/local/bin/ or add the path to the $PATH. 
+
+<a name=ccache></a>
+- If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.samba.org/) to speed up repeating compilation**.
+
+    Run `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux then
+    
+    ```
+    export USE_CCACHE=1             #you'd better put this line to your ~/.bash_profile etc.
+    export CCACHE_DIR=~/ccache      #you'd better put this line to your ~/.bash_profile etc.
+    ```
+    
+    Then run `ccache -M 50G` once to set cache size.
 
 ## Screenshot
 
@@ -75,6 +87,7 @@ Compiler options:
  --ccache       Speed up compilation by CCACHE. This will wrap android gcc...
                 or $CC... or $CC_target... with ccache. When in -c or -C mode,
                 this implies appending a host-side hack option "ccache".
+                If $USE_CCACHE is 1 then this option is implied.
 
 Hack options:
  --hack  HACK   Hack host(local) compiler commands. Must be combination of
@@ -238,19 +251,12 @@ When want run commands(such as gcc), just prepend above command to your command.
 - The modified py file replace shutil.copy2 and shutil.copytree with customized copy2 and copytree which use hard link.
 - You can specify `--copy` to force use traditional copy mode. 
 
-### 8. Support ccache to speed up repeating compilation.
+### 8. Support CCACHE to speed up repeating compilation.
 
-- Specify `--ccache` option will use `ccache gcc ...` to compile.
+- Install [CCACHE](https://ccache.samba.org/) and config it as described [above](#ccache).
+- Set env var USE_CCACHE=1 or specify `--ccache` option to android-gcc-toolchain to tell it use `ccache gcc ...` to compile.
 - This option cooperate with Redirection Mode or Env Mode -c($CC...) or -C($CC_target...).
-- When -c or -C, it implicitly add a hack option `ccache` to supersede all host-side compiler commands with a ccache wrapper.
-
-- First you need install `ccache` by `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux. then:
-
-    ```
-    export USE_CCACHE=1             #you'd better put this line to your ~/.bash_profile etc.
-    export CCACHE_DIR=~/ccache      #you'd better put this line to your ~/.bash_profile etc.
-    ccache -M 50G                   #set cache size once is ok
-    ```
+- When -c or -C, it implicitly add a hack option `ccache` to supersede all host-side compiler commands with ccache wrappers provided by this tool.
 
 <a name=docker></a>
 ### 9. Use this tool in Docker (Docker image id: `osexp2000/android-gcc-toolchain`)
@@ -344,69 +350,4 @@ It solves some common cross-compile problems on Mac or Linux, most are host-side
     (only when found any -l option which means linking to some lib).
 
 ----
-
-# Build NodeJS for Android perfectly 
-
-- **`Perfectly` means do not add any `--without-...` option, nor modifying any source (include build settings) as possible.**
-    see [Full Build](#full-build).
-
-- Source of [NodeJS](https://github.com/nodejs/node): 6.3.1-6.5.0
-
-- **To speed up repeating compilation, you'd better add `--ccache` option for `android-gcc-toolchain`**
-
-    First you need install `ccache` by `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux. then:
-    
-    ```
-    export USE_CCACHE=1             #you'd better put this line to your ~/.bash_profile etc.
-    export CCACHE_DIR=~/ccache      #you'd better put this line to your ~/.bash_profile etc.
-    ccache -M 50G                   #set cache size once is ok
-    ```
-
-## Limited build
-
-Drop some features by `--without-snapshot` `--without-inspector` `--without-intl` then build on Mac/Linux.
-
-```
-android-gcc-toolchain arm    <<< "./configure --dest-cpu=arm    --dest-os=android --without-snapshot --without-inspector --without-intl && make"
-android-gcc-toolchain arm64  <<< "./configure --dest-cpu=arm64  --dest-os=android --without-snapshot --without-inspector --without-intl && make"
-android-gcc-toolchain x86    <<< "./configure --dest-cpu=x86    --dest-os=android --without-snapshot --without-inspector --without-intl && make"
-android-gcc-toolchain x64    <<< "./configure --dest-cpu=x64    --dest-os=android --without-snapshot --without-inspector --without-intl --openssl-no-asm && make"
-android-gcc-toolchain mipsel <<< "./configure --dest-cpu=mipsel --dest-os=android --without-snapshot --without-inspector --without-intl && make"
-```
-    
-For x64: `--openssl-no-asm` needed due to openssl assembly optimization not ready for android-x64.
-
-## Full build
-
-Using `android-gcc-toolchain --hack ... -C`, you can build nodejs **with all features** easily.
-
-see [About hack mode](https://github.com/sjitech/android-gcc-toolchain#about-hack-mode), 
-it's not terrible as sound, it just supersede compiler commands in $PATH and add/remove some option.
-
-### Full build on Mac
-
-```
-android-gcc-toolchain arm    --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=arm    --dest-os=android && make"
-android-gcc-toolchain arm64  --hack ar-dual-os,gcc-no-lrt         -C <<< "./configure --dest-cpu=arm64  --dest-os=android && make"
-android-gcc-toolchain x86    --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=x86    --dest-os=android && make"
-android-gcc-toolchain x64    --hack ar-dual-os,gcc-no-lrt         -C <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
-android-gcc-toolchain mipsel --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C <<< "./configure --dest-cpu=mipsel --dest-os=android && make"
-```
-The sed command is to modify a bug of `configure`. 
- 
-### Full build on Linux
- 
-```
-android-gcc-toolchain arm    --hack gcc-lpthread,gcc-m32 -C <<< "./configure --dest-cpu=arm    --dest-os=android && make"
-android-gcc-toolchain arm64  --hack gcc-lpthread         -C <<< "./configure --dest-cpu=arm64  --dest-os=android && make"
-android-gcc-toolchain x86    --hack gcc-lpthread,gcc-m32 -C <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x86 --dest-os=android && make"
-android-gcc-toolchain x64    --hack gcc-lpthread         -C <<< "sed -i.bak 's/cross_compiling = target_arch != host_arch/cross_compiling = True/' configure && ./configure --dest-cpu=x64 --dest-os=android --openssl-no-asm && make"
-android-gcc-toolchain mipsel --hack gcc-lpthread,gcc-m32 -C <<< "./configure --dest-cpu=mipsel --dest-os=android && make"
-```
-
-For x86:You must install 32bit lib by `sudo apt-get install -y g++-multilib gcc-multilib`,otherwise complained about sys/cdefs.h etc. not found.
-
-For more detail and a prebuilt docker image which contains build result of nodejs, 
-see [build-nodejs-for-android-perfectly](https://github.com/sjitech/build-nodejs-for-android-perfectly).
-
 Good luck.
