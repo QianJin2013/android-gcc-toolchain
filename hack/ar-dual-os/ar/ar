@@ -1,7 +1,7 @@
 #!/bin/bash
 EXE_NAME=ar
 function _agcc-msg { echo "[ar-dual-os]" "$@" >&2; }
-function _agcc-dbg { [[ $AGCC_DBG ]] && _agcc-msg "$@"; }
+function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && _agcc-msg "$@"; }
 
 ###############################################################################
 #Search the exe behind me in $PATH. Faster than using `which -a $EXE_NAME`.
@@ -10,7 +10,7 @@ IFS=: pathList=($PATH); unset IFS  #split $PATH by :, save to array
 
 EXE_PATH=""; foundMyself=""
 for d in "${pathList[@]}"; do
-    if [[ -f $d/$EXE_NAME ]]; then
+    if [[ -x $d/$EXE_NAME ]]; then
         if [[ $d/$EXE_NAME -ef "$0" ]]; then #is it actually myself? (symbol link also works)
             foundMyself=YES
         elif [[ $foundMyself ]]; then
