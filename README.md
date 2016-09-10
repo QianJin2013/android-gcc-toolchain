@@ -31,16 +31,11 @@ Nothing. Just use the `android-gcc-toolchain` with full path,
 otherwise link it to /usr/local/bin/ or add the path to the $PATH. 
 
 <a name=ccache></a>
-- If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.samba.org/) to speed up repeating compilation**.
-
-    Run `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux then
-    
-    ```
-    export USE_CCACHE=1             #you'd better put this line to your ~/.bash_profile etc.
-    export CCACHE_DIR=~/ccache      #you'd better put this line to your ~/.bash_profile etc.
-    ```
-    
-    Then run `ccache -M 50G` once to set cache size.
+If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.samba.org/) to speed up repeating compilation**.
+- Run `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux
+- `export USE_CCACHE=1` to tell android-gcc-toolchain to use CCACHE(otherwise specify --ccache every time).
+- `export CCACHE_DIR=some_dir`(default is ~/.ccache).
+- run `ccache -M 50G` once to set max cache size(default is 5G).
 
 ## Screenshot
 
@@ -52,14 +47,14 @@ otherwise link it to /usr/local/bin/ or add the path to the $PATH.
 
 ## Usage
 
-Use or create toolchain, set env and run command, or print "the bin dir/".
+Enable you to enter an android-oriented cross-compile environment easily.
 
-*Note: words in `[  ]` means may be omitted.*
+*Note: words in `[  ]` means may be omitted. "|" means or. "{...} means selection. (default) means can be omitted"*
 <a name="options"></a>
 ```
-android-gcc-toolchain [OPTIONS] [CMD [ARGS...]]
+Usage: android-gcc-toolchain [OPTIONS] [CMD [ARGS...]]
 --------------------------------------------------------------------------------
-OPTIONS: Toolchain options, Env Mode, Misc options
+OPTIONS: for toolchain, env mode, CCACHE, host compiler,...
 
 Toolchain options: specify which toolchain to use or create
  [--arch] ARCH  Android architecture:
@@ -74,8 +69,8 @@ Toolchain options: specify which toolchain to use or create
  --copy         Force copy files instead of create hard link of files when
                 create toolchain first time
 
-Env Mode: Specify whether set $PATH or $CC... or $CC_target...
- omitted        This is the Redirect Mode.
+Env mode options: Specify whether set $PATH or $CC... or $CC_target...
+ omitted        This is the Redirect mode.
                 Set $PATH to redirect gcc... to the toolchain's gcc...
                 e.g. export PATH=".../std-toolchains/.../bin:$PATH"
  -c             Set $CC,$CXX,$LINK,$AR,$AS,$RANLIB,$LD,$STRIP,$NM
@@ -83,21 +78,23 @@ Env Mode: Specify whether set $PATH or $CC... or $CC_target...
  -C             Set $CC_target,$CXX_target,$LINK_target,...,$NM_target
                 e.g. export CC_target=".../std-toolchains/.../bin/gcc"
 
-Compiler options:
- --ccache       Speed up compilation by CCACHE. This will wrap android gcc...
-                or $CC... or $CC_target... with ccache. When in -c or -C mode,
-                this implies appending a host-side hack option "ccache".
-                If $USE_CCACHE is 1 then this option is implied.
+CCACHE option: Speed up repeating compilation
+ --ccache       Means compilers(gcc/g++/cc/c++) will run via ccache command.
+                Redirect mode: android compilers use ccache.
+                $CC mode(-c): android compilers use ccache.
+                $CC_target mode(-C): android and host compilers use ccache.
+                Note: If $USE_CCACHE is 1 then this option is implied.
 
-Hack options:
- --hack  HACK   Hack host(local) compiler commands. Must be combination of
-                available options(use --help-hack to show), joined by comma.
-                This option only works for -c or -C option.
-                For detail, refer to "About Hack mode" section.
+Host compiler option: Add/remove options to host compiler forcibly
+ --host  RULES  Mandatory host compiler rules. Must be a comma joined 
+                combination of available rules(Use --help-host to show).
+                Only works for $CC_target mode(-C).
+                This is done by supersede host compiler in $PATH by some
+                wrapper scripts to add/remove option then transfer to original.
 
 Other options:
  --version      Show version of this tool
- - or --        Means the end of options and next arg is CMD. But if nothing 
+ -|--           Means the end of options and next arg is CMD. But if nothing 
                 followed, then just print output the bin dir(slash ended).
 --------------------------------------------------------------------------------
 CMD and ARGS: The external command to be run
@@ -141,16 +138,14 @@ When want run commands(such as gcc), just prepend above command to your command.
     android-gcc-toolchain arm64                               #bash
     android-gcc-toolchain arm64 zsh                           #zsh
     ```
-    
-    See also: [redirected commands list](#about-redirect-mode).
-    
+
 - start an interactive bash with $CC... predefined
 
     ```
     android-gcc-toolchain arm64 -c
     ```
 
-    See also: [env vars passed to CMD](#about-env-vars-passed-to-cmd) 
+    See also: [About env vars passed to CMD](#about-env-vars-passed-to-cmd) 
 
 - start an interactive bash with $CC_target... predefined
     
@@ -158,7 +153,7 @@ When want run commands(such as gcc), just prepend above command to your command.
     android-gcc-toolchain arm64 -C
     ```
 
-    See also: [env vars passed to CMD](#about-env-vars-passed-to-cmd).
+    See also: [About env vars passed to CMD](#about-env-vars-passed-to-cmd).
 
 
 - *Notes*
@@ -208,7 +203,7 @@ When want run commands(such as gcc), just prepend above command to your command.
     android-gcc-toolchain arm64 -c <<< "./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl && make"
     ```
     
-    *The first `-c` option is for `android-gcc-toolchain`, not for bash.*   
+    *The first `-c` is for `android-gcc-toolchain`, not for bash.*   
     This is a graceful way to do target-only cross-compile.
     
 - Enter a `$CC_target`... predefined environment to build.
@@ -217,13 +212,13 @@ When want run commands(such as gcc), just prepend above command to your command.
     android-gcc-toolchain arm64 -C <<< "./configure --dest-cpu=arm64 --dest-os=android && make"
     ```
     
-    *The `-C` option is UPPER CASE.*  
+    *The `-C` is UPPER CASE.*  
     This is the most graceful way to do a hybrid cross-compile, it assumes:
     - Compiler commands for target(Android) honor the `$CC_target`...,
     - Compiler commands for host(Mac) honor the `$CC_host`... or `$CC`... or pick from `$PATH`.
     
     **But above command will run into error, just because several wrong project settings.**  
-    You can use [Hack Mode](#about-hack-mode) to overcome them easily, 
+    You can use [Mandatory host compiler rules](#host-compiler-rules) to overcome them easily, 
     otherwise you have to find and modify the wrong settings each time.
 
 ### 5. Automatically get minimum/maximum `Android API level` from NDK.
@@ -253,10 +248,9 @@ When want run commands(such as gcc), just prepend above command to your command.
 
 ### 8. Support CCACHE to speed up repeating compilation.
 
-- Install [CCACHE](https://ccache.samba.org/) and config it as described [above](#ccache).
-- Set env var USE_CCACHE=1 or specify `--ccache` option to android-gcc-toolchain to tell it use `ccache gcc ...` to compile.
-- This option cooperate with Redirection Mode or Env Mode -c($CC...) or -C($CC_target...).
-- When -c or -C, it implicitly add a hack option `ccache` to supersede all host-side compiler commands with ccache wrappers provided by this tool.
+- When you clean & compile repeatedly, you'd better use CCACHE.
+- Need install CCACHE first and config it as described in [Install-CCACHE](#ccache).
+- See [About how CCACHE are used](#about-how-ccache-are-used)
 
 <a name=docker></a>
 ### 9. Use this tool in Docker (Docker image id: `osexp2000/android-gcc-toolchain`)
@@ -288,66 +282,80 @@ When want run commands(such as gcc), just prepend above command to your command.
 - This tool create dir in your NDK dir, in following format:   
  `$NDK/std-toolchains/android-APIL-ARCH[STL_TAG]`
 
-- This is not only for easy management, but also for keep some commands work.
- 
-    e.g. `ndk-gdb`, `ndk-which`... call neighbour files from `\$NDK/SOME_DIR` level.
-    When in Redirect Mode, such command is called into the toolchain's one.
-    To keep them works same as previous, i have to choose such a dir hierarchy.
-
-- After you upgrade your NDK, you need specify `--force` option to recreate toolchains. 
+- If NDK is upgraded, please specify `--force` to recreate toolchains 
 
 ## About env vars passed to CMD
 
-- `PATH`: will be changed under certain conditions(redirect or hack). 
-  When called recursively, it will be restored first
+- `PATH`: will be changed under certain conditions:
+    use [Redirect mode](#about-redirect-mode) 
+    or use [Mandatory host compiler rules](#host-compiler-rules))
+    or use CCACHE([About how CCACHE are used](#about-how-ccache-are-used)). 
+    When called recursively, it will be restored first
 
 - GYP_DEFINES: will be set to "host_os=<mac|linux>" to specify host_os for gyp.
 
 - BIN AGCC_BIN AGCC_HACK_DIR: will be set for cleaner and as mnemonics.
 
-- Following vars will be set for specified Env Mode, otherwise cleared:
+- Following vars will be set for $CC mode(-c) or $CC_target mode(-C), otherwise cleared:
  - CC CXX LINK AR CC_target CXX_target LINK_target AR_target
  - AS RANLIB LD STRIP NM AS_target RANLIB_target LD_target STRIP_target NM_target
 
-## About redirect mode
+## About Redirect mode
 
-- Without `-c` nor `-C` option, the specified command will run in a `Redirect Mode`.
-- In this mode, the following commands are redirected to the toolchain's one.
-    - cc(->gcc) gcc g++ c++ cpp clang clang++ yasm ar ar as ranlib ld strip ...
-    - readelf objdump nm c++filt elfedit objcopy strings size ...
-    - gdb addr2line gcov gprof gcore dwp ...
-    - llvm-as llvm-dis llvm-link FileCheck ...
-    - ndk-depends ndk-gdb ndk-which ndk-stack ...
+In this mode(means without -c|-C), the following commands are redirected to the toolchain's one.
 
-- And as a fallback, `python` `make` `awk`... are moved to ../tools which are appended to $PATH 
-    so they are also available if no existing one.
+- cc(->gcc) gcc g++ c++ cpp clang clang++ ar ar as ranlib ld strip ...
+- readelf objdump nm c++filt elfedit objcopy strings size ...
+- addr2line gcov gprof gcore dwp ...
+- llvm-as llvm-dis llvm-link FileCheck ...
 
-<a name="about-hack-mode"></a>
-## About Hack mode
- 
-It solves some common cross-compile problems on Mac or Linux, most are host-side problem:
+### About NDK python,make,awk,yasm,gdb,ndk-depends... (prebuilt common utilities)
 
-- [Mac] **ar**: Some projects does not honor `$AR_target` when make Android-side static
- lib(*.a). Instead, they call Mac-side ar command, so cause link error.
+- The \$NDK/prebuilt/*/bin/ are always appended to \$PATH. so these utilities are
+  always available, but not the first choice in \$PATH
+
+## About how CCACHE is used
+
+- Supersede android compilers
+    - Redirect mode: register wrapper scripts via $PATH
+    - $CC mode(`-c`): change $CC... to use ccache command
+    - $CC_target mode(`-C`): change $CC_target... to use ccache command
+- Supersede host compilers
+    - $CC_target mode(`-C`): append an internal host compiler rule "--ccache" 
+        which register wrapper scripts via $PATH
+        *It's ensured that the these wrapper will be run last in the rule chain.*
+
+<a name="host-option"></a>
+<a name="host-compiler-rules"></a>
+## About Mandatory host compiler rules (--host RULES): 
+
+This tool provide wrapper scripts to supersede compiler commands(gcc|g++|cc|c++) via $PATH, optionally.
+These wrapper scripts 
+- smartly find original compiler command in $PATH behind itself, 
+- add or remove options then transfer to original compiler command.
+- can be chained. The first specified, the first run.
  
-    `--hack ar-dual-os` supersede gcc/g++/cc/c++ in $PATH, 
-    **It detect input \*.o file format, Mac or Android, then call correct one.**
+The mandatory host compiler rules solves some common cross-compile problems on Mac or Linux:
+
+- [Mac] **ar**: Some projects does not honor `$AR_target` when make android static
+ lib(*.a). Instead, they call Mac ar command, so cause link error.
  
-- [Mac] **librt**: Some projects use link option `-lrt` (librt) comes from linux, but
- Mac have no librt, so cause "library not found for -lrt".
+    `--host ar-dual-os` detect input \*.o file format, Mac or android, then call correct one.
  
-    `--hack gcc-no-lrt` supersede gcc/g++/cc/c++ in $PATH, remove -lrt option.
+- [Mac] **-lrt**: Some projects use link option `-lrt` (librt) comes from linux, but
+ Mac have no librt, so cause link error "library not found for -lrt".
  
-- [Mac/Linux] **m32**: On 64bit OS, some projects added `-m32` option to gcc to produce
+    `--host gcc-no-lrt` remove -lrt option.
+ 
+- [Mac/Linux] **-m32**: On 64bit OS, some projects added `-m32` option to gcc to produce
  32bit codes, but some forgot, cause link error of mixing 64 and 32bit codes.
  
-    `--hack gcc-m32` supersede gcc/g++/cc/c++ in $PATH, add -m32 option.
+    `--host gcc-m32` prepend -m32 option if not specified.
 
-- [Linux] **libpthread**: Some projects forgot to add this option so cause linker error:
+- [Linux] **-lpthread**: Some projects forgot to add this option so cause strange link error:
  `...libpthread.so.0: error adding symbols: DSO missing from command line`.
 
-    `--hack gcc-lpthread` supersede gcc/g++/cc/c++ in $PATH, add -lpthread
-    (only when found any -l option which means linking to some lib).
+    `--host gcc-lpthread` append -lpthread option, only when found any other -l option.
 
 ----
 Good luck.
