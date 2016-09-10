@@ -7,6 +7,8 @@ thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then 
 _agcc-dbg "thisDir: \"$thisDir\""
 hackDir=$thisDir/../hack
 
+PATH=$thisDir/..:$PATH
+
 [[ `android-gcc-toolchain - 2>&1 <<<"echo hi"` == */std-toolchains/android-9-arm/bin/ ]] && echo OK || echo $LINENO
 [[ `android-gcc-toolchain arm     2>&1 <<<"echo hi"` == hi ]] && echo OK || echo $LINENO
 [[ `android-gcc-toolchain arm    --hack ar-dual-os,gcc-no-lrt,gcc-m32 -C  2>&1 <<<"echo hi"` == *"invalid long option"* ]] && echo OK || echo $LINENO

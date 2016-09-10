@@ -3,7 +3,7 @@ function _agcc-msg { echo "$@" >&2; }
 function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
 function _agcc-guide { echo "" "$@" >&2; }
 
-VERSION=1.8.0
+VERSION=1.8.1
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
 _agcc-dbg "thisDir: \"$thisDir\""
@@ -16,7 +16,7 @@ done
     [[ $d ]] && export NDK=$d/ndk-bundle && break
 done
 
-ARCH=""; APIL=""; STL=""; FORCE="" ENV_MODE=""; CMD=""; HACK=""; HACK_LIST=(); VERBOSE=""; COPY=""; CCACHE=""
+ARCH=""; APIL=""; STL=""; FORCE=""; ENV_MODE=""; CMD=""; HACK=""; HACK_LIST=(); VERBOSE=""; COPY=""; CCACHE=""
 
 while [[ $# -gt 0 ]]; do
     _agcc-dbg "\"$1\""
@@ -122,7 +122,6 @@ if [[ ! $CMD ]]; then
         _agcc-msg " [--stl]  STL   C++ STL to use:"
         _agcc-msg "                {gnustl(default)|libc++|stlport}"
         _agcc-msg " --force        Delete existing toolchain dir then create"
-        _agcc-msg " -v|--verbose   Show verbose information"
         _agcc-msg " --copy         Force copy files instead of create hard link of files when"
         _agcc-msg "                create toolchain first time"
         _agcc-msg ""
@@ -150,6 +149,7 @@ if [[ ! $CMD ]]; then
         _agcc-msg "                wrapper scripts to add/remove option then transfer to original."
         _agcc-msg ""
         _agcc-msg "Other options:"
+        _agcc-msg " -v|--verbose   Show verbose information"
         _agcc-msg " --version      Show version of this tool"
         _agcc-msg " -|--           Means the end of options and next arg is CMD. But if nothing "
         _agcc-msg "                followed, then just print output the bin dir(slash ended)."
