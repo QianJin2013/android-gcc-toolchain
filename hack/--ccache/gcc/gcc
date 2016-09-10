@@ -36,4 +36,7 @@ if [[ ! $EXE_PATH ]]; then
     exit 1
 fi
 
+###############################################################################
+#run command via ccache
+
 exec ccache "$EXE_PATH" "$@"

@@ -48,6 +48,7 @@ for arg in "$@"; do
 done
 
 ###############################################################################
-#otherwise run command with -lpthread
+#otherwise run command with -m32
+
 _agcc-msg "call \"$EXE_PATH\" with -m32 option"
 exec "$EXE_PATH" -m32 "$@"
