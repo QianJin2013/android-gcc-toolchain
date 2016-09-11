@@ -49,7 +49,7 @@ If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.
 
 Enable you to enter an android-oriented cross-compile environment easily.
 
-*Note: words in `[  ]` means may be omitted. "|" means or. "{...} means selection. (default) means can be omitted"*
+*Note: words in `[  ]` means may be omitted. "|" means "or". {...} means selection. (default) means can be omitted*
 <a name="options"></a>
 ```
 Usage: android-gcc-toolchain [OPTIONS] [CMD [ARGS...]]
@@ -65,7 +65,6 @@ Toolchain options: specify which toolchain to use or create
  [--stl]  STL   C++ STL to use:
                 {gnustl(default)|libc++|stlport}
  --force        Delete existing toolchain dir then create
- -v|--verbose   Show verbose information
  --copy         Force copy files instead of create hard link of files when
                 create toolchain first time
 
@@ -93,8 +92,9 @@ Host compiler option: Add/remove options to host compiler forcibly
                 wrapper scripts to add/remove option then transfer to original.
 
 Other options:
+ -v, --verbose  Show verbose information
  --version      Show version of this tool
- -|--           Means the end of options and next arg is CMD. But if nothing 
+ -, --          Means the end of options and next arg is CMD. But if nothing 
                 followed, then just print output the bin dir(slash ended).
 --------------------------------------------------------------------------------
 CMD and ARGS: The external command to be run
