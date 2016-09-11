@@ -1,10 +1,10 @@
 #!/bin/bash
-function _agcc-msg { echo "$@" >&2; }
-function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
-function _agcc-guide { echo "" "$@" >&2; }
+function _msg { echo "$@" >&2; }
+function _dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
+function _guide { echo "" "$@" >&2; }
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
-_agcc-dbg "thisDir: \"$thisDir\""
+_dbg "thisDir: \"$thisDir\""
 hackDir=$thisDir/../hack
 
 PATH=$thisDir/..:$PATH

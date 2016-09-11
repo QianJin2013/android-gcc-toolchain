@@ -1,7 +1,7 @@
 #!/bin/bash
 EXE_NAME=${0##*/}
-function _agcc-msg { echo "[$EXE_NAME-lpthread]" "$@" >&2; }
-function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && _agcc-msg "$@"; }
+function _msg { echo "[$EXE_NAME-lpthread]" "$@" >&2; }
+function _dbg { [[ $AGCC_DBG == 1 ]] && _msg "$@"; }
 
 ###############################################################################
 #Search the exe behind me in $PATH. Even faster than {for f in `type -ap name`}
@@ -32,7 +32,7 @@ for name in $EXE_NAME $ALT_EXE_NAME; do
 done
 
 if [[ ! $EXE_PATH ]]; then
-    _agcc-msg "$EXE_NAME${ALT_EXE_NAME+ or }$ALT_EXE_NAME not found."
+    _msg "$EXE_NAME${ALT_EXE_NAME+ or }$ALT_EXE_NAME not found."
     exit 1
 fi
 
@@ -42,7 +42,7 @@ fi
 has_lLIB=""
 for arg in "$@"; do
     if [[ $arg == -lpthread ]]; then
-        _agcc-dbg "call \"$EXE_PATH\" (already specified -lpthread option)"
+        _dbg "call \"$EXE_PATH\" (already specified -lpthread option)"
         exec "$EXE_PATH" "$@"
         exit
     elif [[ $arg == -l* ]]; then
@@ -52,7 +52,7 @@ done
 
 #if not sure whether need append -lpthread option then run command without change.
 if [[ ! $has_lLIB ]]; then
-    _agcc-dbg "call \"$EXE_PATH\" (no any -lLIB option)"
+    _dbg "call \"$EXE_PATH\" (no any -lLIB option)"
     exec "$EXE_PATH" "$@"
     exit
 fi
@@ -60,5 +60,5 @@ fi
 ###############################################################################
 #otherwise run command with -lpthread
 
-_agcc-msg "call \"$EXE_PATH\" with -lpthread"
+_msg "call \"$EXE_PATH\" with -lpthread"
 exec "$EXE_PATH" "$@" -lpthread

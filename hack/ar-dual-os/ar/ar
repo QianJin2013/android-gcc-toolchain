@@ -1,7 +1,7 @@
 #!/bin/bash
 EXE_NAME=ar
-function _agcc-msg { echo "[ar-dual-os]" "$@" >&2; }
-function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && _agcc-msg "$@"; }
+function _msg { echo "[ar-dual-os]" "$@" >&2; }
+function _dbg { [[ $AGCC_DBG == 1 ]] && _msg "$@"; }
 
 ###############################################################################
 #Search the exe behind me in $PATH. Even faster than {for f in `type -ap name`}
@@ -21,7 +21,7 @@ for d in "${pathList[@]}"; do
 done
 
 if [[ ! $EXE_PATH ]]; then
-    _agcc-msg "$EXE_NAME not found."
+    _msg "$EXE_NAME not found."
     exit 1
 fi
 
@@ -29,7 +29,7 @@ fi
 #get path of target-side ar and objdump from \$AR_target
 
 if [[ ! $AR_target ]]; then
-    _agcc-msg "AR_target not defined."
+    _msg "AR_target not defined."
     exit 1
 fi
 
@@ -53,18 +53,18 @@ done
 #use target objdump to test .o file, if OK, then run target ar
 
 if [[ $OBJ_FILE ]]; then
-    _agcc-dbg "check \"$OBJ_FILE\" by run \"$objdump\" -a on it"
+    _dbg "check \"$OBJ_FILE\" by run \"$objdump\" -a on it"
     if "$objdump" -a "$OBJ_FILE" >/dev/null 2>/dev/null; then
-        _agcc-msg "call \"$AR_target\""
+        _msg "call \"$AR_target\""
         exec "$AR_target" "$@"
         exit
     fi
 else
-    _agcc-msg "no any non-empty *.o file provided for type check."
+    _msg "no any non-empty *.o file provided for type check."
 fi
 
 ###############################################################################
 #otherwise call host ar
 
-_agcc-msg "call \"$EXE_PATH\""
+_msg "call \"$EXE_PATH\""
 exec "$EXE_PATH" "$@"
