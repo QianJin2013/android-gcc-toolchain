@@ -1,7 +1,7 @@
 #!/bin/bash
 EXE_NAME=${0##*/}
-function _agcc-msg { echo "[$EXE_NAME-no-lrt]" "$@" >&2; }
-function _agcc-dbg { [[ $AGCC_DBG == 1 ]] && _agcc-msg "$@"; }
+function _msg { echo "[$EXE_NAME-no-lrt]" "$@" >&2; }
+function _dbg { [[ $AGCC_DBG == 1 ]] && _msg "$@"; }
 
 ###############################################################################
 #Search the exe behind me in $PATH. Even faster than {for f in `type -ap name`}
@@ -32,7 +32,7 @@ for name in $EXE_NAME $ALT_EXE_NAME; do
 done
 
 if [[ ! $EXE_PATH ]]; then
-    _agcc-msg "$EXE_NAME${ALT_EXE_NAME+ or }$ALT_EXE_NAME not found."
+    _msg "$EXE_NAME${ALT_EXE_NAME+ or }$ALT_EXE_NAME not found."
     exit 1
 fi
 
@@ -54,17 +54,17 @@ for arg in "$@"; do
 done
 
 if [[ ! $ind ]]; then
-    _agcc-dbg "call \"$EXE_PATH\" (no -lrt option yet)"
+    _dbg "call \"$EXE_PATH\" (no -lrt option yet)"
     exec "$EXE_PATH" "$@"
     exit
 fi
 
-_agcc-dbg found count: $count, first ind: $ind
+_dbg found count: $count, first ind: $ind
 
 ###############################################################################
 #otherwise run command without -lrt
 
-_agcc-msg "call \"$EXE_PATH\" without -lrt option"
+_msg "call \"$EXE_PATH\" without -lrt option"
 if [[ $count == 1 ]]; then
     exec "$EXE_PATH" "${@:1:$ind}" "${@:$((ind+2))}"
 else
