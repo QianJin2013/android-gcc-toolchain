@@ -40,9 +40,11 @@ If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.
 ## Screenshot
 
 - Run android gcc related commands easily
+
 ![android-gcc](img/android-gcc.png)
 
 - Enter a dedicated shell where can run android gcc related commands easily:
+
 ![android-gcc-enter](img/android-gcc-enter.png)
 
 ## Usage
