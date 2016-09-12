@@ -40,9 +40,11 @@ If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.
 ## Screenshot
 
 - Run android gcc related commands easily
+
 ![android-gcc](img/android-gcc.png)
 
 - Enter a dedicated shell where can run android gcc related commands easily:
+
 ![android-gcc-enter](img/android-gcc-enter.png)
 
 ## Usage
@@ -258,7 +260,7 @@ When want run commands(such as gcc), just prepend above command to your command.
 - You can run docker with docker to enter a [dedicated shell](#dedicated-shell). e.g.
  
     ```
-    $ docker run -it osexp2000/android-gcc-toolchain arm64 --ccache
+    $ docker run -it osexp2000/android-gcc-toolchain arm64
     ... ...
     [android-21-arm64] YOUR_COMMAND_HERE 
     ```
