@@ -258,7 +258,7 @@ When want run commands(such as gcc), just prepend above command to your command.
 - You can run docker with docker to enter a [dedicated shell](#dedicated-shell). e.g.
  
     ```
-    $ docker run -it osexp2000/android-gcc-toolchain arm64 --ccache
+    $ docker run -it osexp2000/android-gcc-toolchain arm64
     ... ...
     [android-21-arm64] YOUR_COMMAND_HERE 
     ```
