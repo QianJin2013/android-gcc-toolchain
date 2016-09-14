@@ -198,7 +198,7 @@ if [[ ! $CMD ]]; then
             for d2 in "$d1"/*; do
                 [[ $d2 == *\** ]] && break
                 exeName=${d2##*/}  #gcc-no-lrt/gcc -> gcc
-                if [[ -x $d2/$exeName ]] || chmod a+x "$d2/$exeName" 2>/dev/null; then
+                if [[ -f $d2/$exeName && -x $d2/$exeName ]] || chmod a+x "$d2/$exeName" 2>/dev/null; then
                     msg+=" ${d2##$hackDir/}"
                 fi
             done
@@ -333,7 +333,7 @@ if [[ $HACK || ( $CCACHE && $ENV_MODE == -C ) ]]; then
         ok=""
         for d2 in "${dirList[@]}"; do
             exeName=${d2##*/}  #gcc-no-lrt/gcc -> gcc
-            if [[ -x $d2/$exeName ]] || chmod a+x "$d2/$exeName" 2>/dev/null; then
+            if [[ -f $d2/$exeName && -x $d2/$exeName ]] || chmod a+x "$d2/$exeName" 2>/dev/null; then
                 ok=YES
                 already_checked "$d2" || HACK_LIST[${#HACK_LIST[@]}]=$d2
             fi
@@ -399,7 +399,7 @@ if [[ ! -d $DIR || $FORCE ]]; then
         ) --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
     fi
 
-    if [[ -x "$BIN/$ARCH_PREFIX"gcc ]]; then
+    if [[ -f "$BIN/$ARCH_PREFIX"gcc && -x "$BIN/$ARCH_PREFIX"gcc ]]; then
         _msg "Done"
         _msg ""
     else
@@ -408,7 +408,7 @@ if [[ ! -d $DIR || $FORCE ]]; then
         _msg ""
         exit 1
     fi
-elif [[ ! -x "$BIN/$ARCH_PREFIX"gcc ]]; then
+elif [[ ! -f "$BIN/$ARCH_PREFIX"gcc && -x "$BIN/$ARCH_PREFIX"gcc ]]; then
     _msg "invalid toolchain. The std-toolchains/$NAME/bin/${ARCH_PREFIX}gcc not found at \$NDK(\"$NDK\")."
     _msg "Please use --force --verbose to recreate toolchain."
     _msg ""
@@ -419,7 +419,7 @@ fi
 if [[ ! -f $BIN/.symbol_linked ]]; then
     for f in "$BIN"/$ARCH_PREFIX*; do
         s=${f##*$ARCH_PREFIX}; #$BIN/arm-linux-androideabi-gcc -> gcc
-        [[ ! -e $BIN/$s && -x $f ]] && ln -s "$ARCH_PREFIX$s" "$BIN/$s"
+        [[ ! -e $BIN/$s && -f $f && -x $f ]] && ln -s "$ARCH_PREFIX$s" "$BIN/$s"
     done
     [[ ! -e $BIN/cc ]] && ln -s ${ARCH_PREFIX}gcc "$BIN/cc"
     touch "$BIN/.symbol_linked"

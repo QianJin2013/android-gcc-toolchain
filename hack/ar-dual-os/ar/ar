@@ -10,7 +10,7 @@ IFS=: pathList=($PATH); unset IFS  #split $PATH by :, save to array
 
 EXE_PATH=""; foundMyself=""
 for d in "${pathList[@]}"; do
-    if [[ -x $d/$EXE_NAME ]]; then
+    if [[ -f $d/$EXE_NAME && -x $d/$EXE_NAME ]]; then
         if [[ $d/$EXE_NAME -ef "$0" ]]; then #is it actually myself? (symbol link also works)
             foundMyself=YES
         elif [[ $foundMyself ]]; then
