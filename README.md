@@ -279,12 +279,19 @@ When want run commands(such as gcc), just prepend above command to your command.
 
 ----
 
-## About where the toolchain created
+## About where the toolchain created and what's in it
 
 - This tool create dir in your NDK dir, in following format:   
  `$NDK/std-toolchains/android-APIL-ARCH[STL_TAG]`
 
 - If NDK is upgraded, please specify `--force` to recreate toolchains 
+
+- Basically, the toolchain is created by modified version of `$NDK/build/tools/make_standalone_toolchain.py`, 
+    Use hard link by default instead of copy
+
+- Some extra works:
+    - Add definition of `std:snprintf` to "$BIN"/../include/c++/*.*.*/cstdio
+    - For mipsel only: ln -f "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/
 
 ## About env vars passed to CMD
 
