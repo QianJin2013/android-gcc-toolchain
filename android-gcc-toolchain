@@ -3,7 +3,7 @@ function _msg { echo "$@" >&2; }
 function _dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
 function _guide { echo "" "$@" >&2; }
 
-VERSION=1.8.3
+VERSION=1.9
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
 _dbg "thisDir: \"$thisDir\""
@@ -439,6 +439,15 @@ fi
 if [[ $ARCH == mips && ! -f $BIN/../.bits_h_merged ]]; then
     ln -f "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/
     touch "$BIN/../.bits_h_merged"
+fi
+
+#add std::snprintf to cstdio.
+if [[ ! -f $BIN/../.std_snprintf_added ]]; then
+    f=("$BIN"/../include/c++/*.*.*/cstdio)
+    [[ ${f[0]} == *\** ]] && f=("$BIN"/../include/c++/*.*.*/cstdio.old) && f=${f%.old}
+    [[ ! -f $f.old ]] && mv -f "$f" "$f".old
+    awk '/using ::printf;/{print $0 RS "#undef snprintf" RS "using ::snprintf;"; next}1' "$f".old > "$f" \
+    && touch "$BIN/../.std_snprintf_added"
 fi
 
 #build gcc wrapper for ccache
