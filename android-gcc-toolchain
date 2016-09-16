@@ -3,7 +3,7 @@ function _msg { echo "$@" >&2; }
 function _dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
 function _guide { echo "" "$@" >&2; }
 
-VERSION=1.9
+VERSION=1.9.0
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
 _dbg "thisDir: \"$thisDir\""
