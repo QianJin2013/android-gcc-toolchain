@@ -3,7 +3,7 @@ function _msg { echo "$@" >&2; }
 function _dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
 function _guide { echo "" "$@" >&2; }
 
-VERSION=1.9.0
+VERSION=1.9.1
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
 _dbg "thisDir: \"$thisDir\""
@@ -69,7 +69,6 @@ while [[ $# -gt 0 ]]; do
     -|--)
             _dbg " :end of options, next is CMD"
             shift; while [[ $# -gt 0 && ! $1 ]]; do shift; done
-            [[ $1 == --help* ]] && break
             [[ $1 == -* ]] && { _msg "no valid external command after - or --"; exit 1; }
             CMD=$1; [[ ! $CMD ]] && CMD=-; _dbg " CMD=\"$CMD\""
             shift
@@ -435,19 +434,46 @@ if [[ ! -f $BIN/.python_make_awk_removed ]]; then
 fi
 
 #fix possible bug of android-mips: g++ -mips32r2 option cause error "bits/c++config.h" not found.
-#so merge bits/*.h to standard place
-if [[ $ARCH == mips && ! -f $BIN/../.bits_h_merged ]]; then
-    ln -f "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/
+#so merge .../*/bits/*.h to standard place .../bits/
+if [[ $ARCH == mips && $STL == gnustl && ! -f $BIN/../.bits_h_merged ]]; then
+    ln -f "$BIN"/../include/c++/?.?.?/*/bits/*.h "$BIN"/../include/c++/?.?.?/bits/
     touch "$BIN/../.bits_h_merged"
 fi
 
-#add std::snprintf to cstdio.
-if [[ ! -f $BIN/../.std_snprintf_added ]]; then
-    f=("$BIN"/../include/c++/*.*.*/cstdio)
-    [[ ${f[0]} == *\** ]] && f=("$BIN"/../include/c++/*.*.*/cstdio.old) && f=${f%.old}
-    [[ ! -f $f.old ]] && mv -f "$f" "$f".old
-    awk '/using ::printf;/{print $0 RS "#undef snprintf" RS "using ::snprintf;"; next}1' "$f".old > "$f" \
-    && touch "$BIN/../.std_snprintf_added"
+#add std::snprintf to <cstdio> so make it compatible with libc++
+if [[ $STL == gnustl && ! -f $BIN/../.std_snprintf_added_to_cstdio ]]; then
+    "$BIN"/g++ -E -x c++ - <<< "#include <cstdio>" | grep -q 'using ::snprintf'
+    results=("${PIPESTATUS[@]}")
+    if [[ ${results[0]} == 0 ]]; then
+        if [[ ${results[1]} == 0 ]]; then
+            touch "$BIN/../.std_snprintf_added_to_cstdio"
+        else
+            f=("$BIN"/../include/c++/?.?.?/cstdio)
+            [[ ${f[0]} == *\?* ]] && f=("$BIN"/../include/c++/?.?.?/cstdio.old) && f=${f%.old}
+            [[ ! -f $f.old ]] && mv -f "$f" "$f".old
+            awk '/using ::printf;/{print $0 RS "#undef snprintf" RS "using ::snprintf;"; next}1' "$f".old > "$f" \
+            && touch "$BIN/../.std_snprintf_added_to_cstdio"
+        fi
+    fi
+fi
+
+#add std::snprintf to <string> so make it compatible with libc++
+if [[ $STL == gnustl && ! -f $BIN/../.cstdio_added_to_string ]]; then
+    "$BIN"/g++ -E -x c++ - <<< "#include <string>" | grep -q 'using ::snprintf'
+    results=("${PIPESTATUS[@]}")
+    if [[ ${results[0]} == 0 ]]; then
+        if [[ ${results[1]} == 0 ]]; then
+            touch "$BIN/../.cstdio_added_to_string"
+        else
+            f=("$BIN"/../include/c++/?.?.?/string)
+            [[ ${f[0]} == *\?* ]] && f=("$BIN"/../include/c++/?.?.?/string.old) && f=${f%.old}
+            [[ ! -f $f.old ]] && mv -f "$f" "$f".old
+            cp -f "$f".old "$f" \
+            && echo >> "$f" \
+            && echo '#include <cstdio>' >> "$f" \
+            && touch "$BIN/../.cstdio_added_to_string"
+        fi
+    fi
 fi
 
 #build gcc wrapper for ccache
