@@ -6,7 +6,7 @@ As an example, see [Build NodeJS for Android perfectly](https://github.com/sjite
 Tested OS:
 - **Mac**: OS X 10.11.5/10.11.6 EI Capitan (64bit)
 - **Linux**: Ubuntu 16.04 (64bit)
-- **Windows**: Windows Pro 7.
+- *Windows*: Windows Pro 7.
  
     Although not supported directly,
     it can be used in Docker (Docker image id: `osexp2000/android-gcc-toolchain`)
@@ -17,8 +17,8 @@ Tested OS:
 ## Prerequisite
 
 NDK: tested on
- - [NDK 12.1.29 For Mac 64bit](https://dl.google.com/android/repository/android-ndk-r12b-darwin-x86_64.zip)
- - [NDK 12.1.29 For Linux 64bit](https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip)
+ - NDK 12.1.29 ([For Mac 64bit](https://dl.google.com/android/repository/android-ndk-r12b-darwin-x86_64.zip),
+    [For Linux 64bit](https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip))
 
 Install Android NDK and set env var `NDK` to the dir: `export NDK=__the_top_dir_of_installed_NDK__`.
 
