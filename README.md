@@ -290,8 +290,14 @@ When want run commands(such as gcc), just prepend above command to your command.
     Use hard link by default instead of copy
 
 - Some extra works:
-    - Add definition of `std:snprintf` to "$BIN"/../include/c++/*.*.*/cstdio
-    - For mipsel only: ln -f "$BIN"/../include/c++/*.*.*/*/bits/*.h "$BIN"/../include/c++/*.*.*/bits/
+    - For default gnustl C++ STL only: enable use of `std::snprintf` 
+        by `#inlcude <cstdio>` or `#include <string>` like libc++
+        - Insert definition of `std::snprintf` to "$BIN"/../include/c++/?.?.?/cstdio
+        - Append `#include <cstdio>` to "$BIN"/../include/c++/?.?.?/string
+    - For mipsel only: ln -f "$BIN"/../include/c++/?.?.?/*/bits/*.h "$BIN"/../include/c++/?.?.?/bits/ 
+        to avoid error of `bits/c++config.h not found` when specified `-mips32r2` to gcc/g++.
+
+*?.?.? means gcc version such as 4.9.x*
 
 ## About env vars passed to CMD
 
