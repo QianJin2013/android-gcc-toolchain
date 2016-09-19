@@ -3,7 +3,7 @@ function _msg { echo "$@" >&2; }
 function _dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
 function _guide { echo "" "$@" >&2; }
 
-VERSION=1.9.1
+VERSION=1.9.2
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
 _dbg "thisDir: \"$thisDir\""
@@ -247,6 +247,7 @@ esac
 
 ################################################################################
 #check Android API level
+_APIL=${APIL:=min}
 case ${APIL:=min} in
     min|max)
         [[ ! $NDK ]] && { _msg "\$NDK not set. Can not guess from \$ANDROID_NDK_ROOT, \$ANDROID_SDK_HOME,... Please run: export NDK=__the_top_dir_of_installed_NDK__"; exit 1; }
@@ -284,7 +285,7 @@ esac
 #check C++ STL
 case ${STL:=gnustl} in
     gnustl ) STL_TAG="" ;;
-    libc++ ) STL_TAG=-stlc++ ;;
+    libc++ ) STL_TAG=-libc++ ;;
     stlport) STL_TAG=-stlport ;;
     *) _msg "invalid C++ STL \"$STL\". Must be gnustl(default)|libc++|stlport"; exit 1 ;;
 esac
@@ -414,14 +415,56 @@ elif [[ ! -f "$BIN/$ARCH_PREFIX"gcc && -x "$BIN/$ARCH_PREFIX"gcc ]]; then
     exit 1
 fi
 
-#make some symbol-links such as gcc @-> arm-linux-androideabi-gcc, also link cc @-> gcc
-if [[ ! -f $BIN/.symbol_linked ]]; then
+# By default CCACHE does not cache hash of system include files, while for toolchains with
+# same arch but different C++ STL or Android API level, the system include files changes, but
+# the compilers are still same, so CCACHE will be confused about compile result from different toolchains.
+# To avoid this problem, i have to make the compilers of each toolchain have a unique timestamp, e.g.
+# 2000/01/01/STL:APIL:00
+if [[ ! -f "$BIN"/.simplified_compiler_ready ]]; then
+
+    #make some symbol-links such as gcc @-> arm-linux-androideabi-gcc, also link cc @-> gcc
     for f in "$BIN"/$ARCH_PREFIX*; do
         s=${f##*$ARCH_PREFIX}; #$BIN/arm-linux-androideabi-gcc -> gcc
-        [[ ! -e $BIN/$s && -f $f && -x $f ]] && ln -s "$ARCH_PREFIX$s" "$BIN/$s"
+        ln -sf "$ARCH_PREFIX$s" "$BIN/$s" || exit 1
     done
-    [[ ! -e $BIN/cc ]] && ln -s ${ARCH_PREFIX}gcc "$BIN/cc"
-    touch "$BIN/.symbol_linked"
+    ln -sf "$ARCH_PREFIX"gcc "$BIN"/cc
+
+    #clang/clang++ are wrapper script created by make_standalone_toolchain.py at calling time,
+    # so the timestamp need be keep same (as gcc), no matter of when create toolchain
+    touch -r "$BIN/$ARCH_PREFIX"gcc "$BIN/$ARCH_PREFIX"clang "$BIN/$ARCH_PREFIX"clang++
+
+    #get min Android API level
+    if [[ $STL == gnustl && $_APIL != min ]]; then
+        dirPrefix=$NDK/platforms/android-
+        dirSuffix=/arch-$ARCH
+        dirList=() #save ordered dir list
+        #glob dir list, add to dirList if globed.
+        tmpList=("$dirPrefix"?$dirSuffix)
+        [[ ${tmpList[0]} != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
+        tmpList=("$dirPrefix"??$dirSuffix)
+        [[ ${tmpList[0]} != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
+        tmpList=("$dirPrefix"???$dirSuffix)
+        [[ ${tmpList[0]} != *\?* ]] && dirList=("${dirList[@]}" "${tmpList[@]}")
+        #get first or last dir name, e.x. ...android-9/arch-... or ...android-24/arch-...
+        minAPIL=${dirList[0]}
+        #remove prefix and suffix to get pure number
+        minAPIL=${minAPIL#$dirPrefix}
+        minAPIL=${minAPIL%$dirSuffix}
+    fi
+
+    if [[ $STL != gnustl || ( $_APIL != min && $APIL != $minAPIL ) ]]; then
+        case $STL in libc++) month=03;; stlport) month=05;; *) month=01;; esac
+        ((d=(APIL-minAPIL)%30)); [[ ${#d} == 1 ]] && d=0$d
+        ((h=(APIL-minAPIL)/30)); [[ ${#h} == 1 ]] && h=0$h
+        _dbg set gcc timestamp "2000$month$d$h"00
+        for f in gcc g++ c++ clang clang++ cc; do
+            cp -p "$BIN"/$f "$BIN"/$f.tmp \
+            && touch -t "2000$month$d$h"00 "$BIN"/$f.tmp \
+            && mv "$BIN"/$f.tmp "$BIN"/$f
+        done
+    fi
+
+    touch "$BIN"/.simplified_compiler_ready
 fi
 
 #do not want toolchain's python make awk take precedence of existing one.
