@@ -8,8 +8,10 @@ def copy2(src, dst):
     except OSError as e:
         import errno
         if e.errno == errno.EEXIST:
-            if os.environ['VERBOSE'] == "--verbose" or not (dst.endswith("NOTICE") or dst.endswith("repo.prop")):
-                sys.stderr.write("Warning: failed to copy files: (error: target already exists).\n   \"%s\"\n-> \"%s\"\n" % (src.replace(NDK_DIR, "$NDK"), dst.replace(NDK_DIR, "$NDK")))
+            if not (dst.endswith("NOTICE") or dst.endswith("repo.prop")):
+                import filecmp
+                if not filecmp.cmp(src, dst):
+                    sys.stderr.write("Warning: failed to copy files: (error: target already exists).\n   \"%s\"\n-> \"%s\"\n" % (src.replace(NDK_DIR, "$NDK"), dst.replace(NDK_DIR, "$NDK")))
             pass
         else:
             sys.stderr.write("Error: failed to copy files:\n   \"%s\"\n-> \"%s\"\n" % (src.replace(NDK_DIR, "$NDK"), dst.replace(NDK_DIR, "$NDK")))
