@@ -440,8 +440,9 @@ if [[ ! -f "$BIN"/.simplified_compiler_ready ]]; then
     #make some symbol-links such as gcc @-> arm-linux-androideabi-gcc, also link cc @-> gcc
     for f in "$BIN"/$ARCH_PREFIX*; do
         [[ $f == *\** ]] && break
-        s=${f##*$ARCH_PREFIX}; #$BIN/arm-linux-androideabi-gcc -> gcc
-        ln -sf "$ARCH_PREFIX$s" "$BIN/${s%$_EXE}" || exit 1
+        s=${f##*$ARCH_PREFIX} #$BIN/arm-linux-androideabi-gcc -> gcc
+        s=${s%$_EXE} #remove trailing ".exe"
+        ln -sf "$ARCH_PREFIX$s$_EXE" "$BIN/$s" || exit 1
     done
     ln -sf "$ARCH_PREFIX"gcc$_EXE "$BIN"/cc || exit 1
 
