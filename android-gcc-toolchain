@@ -3,7 +3,10 @@ function _msg { echo "$@" >&2; }
 function _dbg { [[ $AGCC_DBG == 1 ]] && echo "$@" >&2; }
 function _guide { echo "" "$@" >&2; }
 
-VERSION=1.9.2
+VERSION=1.9.3
+
+IS_WIN=""; _EXE=""
+case $OSTYPE in msys|cygwin) _EXE=.exe; IS_WIN=YES;; esac
 
 thisDir=${0%/*}; if target=`readlink "${0}"`; then if [[ $target == /* ]]; then thisDir=${target%/*}; elif [[ $target == */* ]]; then thisDir+=/${target%/*}; fi; fi
 _dbg "thisDir: \"$thisDir\""
@@ -388,18 +391,30 @@ fi
 if [[ ! -d $DIR || $FORCE ]]; then
     _msg "Make std-toolchains/$NAME at \$NDK(\"$NDK\")"
 
+    [[ $IS_WIN && $FORCE ]] && rm -fr "$DIR"
+
     PY_FILE=$NDK/build/tools/make_standalone_toolchain.py
     if [[ $COPY ]]; then
         "$PY_FILE" --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
     else
-        #use hard link as possible. Use customized copy2 and copytree to replace shutil.copy2 and shutil.copytree
-        VERBOSE=$VERBOSE PY_FILE=$PY_FILE python <(
-            cat "$thisDir/fast-copy/func.py"
-            sed "s/__file__/os.environ['PY_FILE']/g;s/shutil\.copy2/copy2/g;s/shutil\.copytree/copytree/g" "$PY_FILE"
-        ) --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
+        if [[ $IS_WIN ]]; then
+            (
+                cat "$thisDir/fast-copy/func.py"
+                sed "s/__file__/os.environ['PY_FILE']/g;s/shutil\.copy2/copy2/g;s/shutil\.copytree/copytree/g" "$PY_FILE"
+            ) > $NDK/build/tools/android-gcc-toolchain$VERSION.py
+            #use hard link as possible. Use customized copy2 and copytree to replace shutil.copy2 and shutil.copytree
+            VERBOSE=$VERBOSE PY_FILE=$PY_FILE python "$NDK"/build/tools/android-gcc-toolchain$VERSION.py \
+             --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
+        else
+            #use hard link as possible. Use customized copy2 and copytree to replace shutil.copy2 and shutil.copytree
+            VERBOSE=$VERBOSE PY_FILE=$PY_FILE python <(
+                cat "$thisDir/fast-copy/func.py"
+                sed "s/__file__/os.environ['PY_FILE']/g;s/shutil\.copy2/copy2/g;s/shutil\.copytree/copytree/g" "$PY_FILE"
+            ) --arch "$ARCH" --api "$APIL" --stl "$STL" --install-dir "$DIR" $FORCE $VERBOSE || exit 1
+        fi
     fi
 
-    if [[ -f "$BIN/$ARCH_PREFIX"gcc && -x "$BIN/$ARCH_PREFIX"gcc ]]; then
+    if [[ -f "$BIN/$ARCH_PREFIX"gcc$_EXE && -x "$BIN/$ARCH_PREFIX"gcc$_EXE ]]; then
         _msg "Done"
         _msg ""
     else
@@ -408,8 +423,8 @@ if [[ ! -d $DIR || $FORCE ]]; then
         _msg ""
         exit 1
     fi
-elif [[ ! -f "$BIN/$ARCH_PREFIX"gcc && -x "$BIN/$ARCH_PREFIX"gcc ]]; then
-    _msg "invalid toolchain. The std-toolchains/$NAME/bin/${ARCH_PREFIX}gcc not found at \$NDK(\"$NDK\")."
+elif [[ ! -f "$BIN/$ARCH_PREFIX"gcc$_EXE && -x "$BIN/$ARCH_PREFIX"gcc$_EXE ]]; then
+    _msg "invalid toolchain. The std-toolchains/$NAME/bin/${ARCH_PREFIX}gcc$_EXE not found at \$NDK(\"$NDK\") or not executable."
     _msg "Please use --force --verbose to recreate toolchain."
     _msg ""
     exit 1
@@ -424,14 +439,15 @@ if [[ ! -f "$BIN"/.simplified_compiler_ready ]]; then
 
     #make some symbol-links such as gcc @-> arm-linux-androideabi-gcc, also link cc @-> gcc
     for f in "$BIN"/$ARCH_PREFIX*; do
+        [[ $f == *\** ]] && break
         s=${f##*$ARCH_PREFIX}; #$BIN/arm-linux-androideabi-gcc -> gcc
-        ln -sf "$ARCH_PREFIX$s" "$BIN/$s" || exit 1
+        ln -sf "$ARCH_PREFIX$s" "$BIN/${s%$_EXE}" || exit 1
     done
-    ln -sf "$ARCH_PREFIX"gcc "$BIN"/cc
+    ln -sf "$ARCH_PREFIX"gcc$_EXE "$BIN"/cc
 
     #clang/clang++ are wrapper script created by make_standalone_toolchain.py at calling time,
     # so the timestamp need be keep same (as gcc), no matter of when create toolchain
-    touch -r "$BIN/$ARCH_PREFIX"gcc "$BIN/$ARCH_PREFIX"clang "$BIN/$ARCH_PREFIX"clang++
+    touch -r "$BIN/$ARCH_PREFIX"gcc$_EXE "$BIN/$ARCH_PREFIX"clang$_EXE "$BIN/$ARCH_PREFIX"clang++$_EXE
 
     #get min Android API level
     if [[ $STL == gnustl && $_APIL != min ]]; then
@@ -471,7 +487,9 @@ fi
 # So remove them. They are provided at $NDK/prebuilt/*/bin which are already appended to $PATH
 if [[ ! -f $BIN/.python_make_awk_removed ]]; then
     for f in "$PREBUILT_BIN"/*; do
-        [[ -f $f ]] && rm -f "$BIN/${f##*/}"
+        [[ $f == *\** ]] && break
+        f=$BIN/${f##*/}  ##xxx/file -> yyy/file
+        [[ -f $f ]] && { rm -f "$f" || mv "$f" "$f"_; }
     done
     touch "$BIN/.python_make_awk_removed"
 fi
@@ -618,7 +636,9 @@ fi
 case $OSTYPE in
     darwin*) export GYP_DEFINES="host_os=mac" ;;
     linux*)  export GYP_DEFINES="host_os=linux" ;;
-    *)       _dbg "unsupported OSTYPE \"$OSTYPE\", so not set GYP_DEFINES=\"host_os=?\"" ;;
+    msys|cygwin)  export GYP_DEFINES="host_os=$OSTYPE" ;;
+    *)  export GYP_DEFINES="host_os=$OSTYPE"
+        _dbg "unsupported OSTYPE \"$OSTYPE\", so just set GYP_DEFINES=\"host_os=$OSTYPE\"" ;;
 esac
 
 #if $NDK contains spaces, then should be quoted in $CC... $CC_target...

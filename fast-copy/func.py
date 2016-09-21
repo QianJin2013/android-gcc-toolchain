@@ -4,19 +4,23 @@ def copy2(src, dst):
     try:
         if os.environ['VERBOSE'] == "--verbose":
             sys.stderr.write("   \"%s\"\n-> \"%s\"\n" % (src.replace(NDK_DIR, "$NDK"), dst.replace(NDK_DIR, "$NDK")))
-        os.link(src, dst)
-    except OSError as e:
-        import errno
-        if e.errno == errno.EEXIST:
-            if not (dst.endswith("NOTICE") or dst.endswith("repo.prop")):
-                import filecmp
-                if not filecmp.cmp(src, dst):
-                    sys.stderr.write("Warning: failed to copy files: (error: target already exists).\n   \"%s\"\n-> \"%s\"\n" % (src.replace(NDK_DIR, "$NDK"), dst.replace(NDK_DIR, "$NDK")))
-            pass
+        if os.name == "nt":
+            import ctypes
+            if not ctypes.windll.kernel32.CreateHardLinkA(dst, src, 0):
+                raise ctypes.WinError()
         else:
-            sys.stderr.write("Error: failed to copy files:\n   \"%s\"\n-> \"%s\"\n" % (src.replace(NDK_DIR, "$NDK"), dst.replace(NDK_DIR, "$NDK")))
-            raise
-
+            os.link(src, dst)
+    except OSError as e:
+        if not ((dst.endswith("NOTICE") or dst.endswith("repo.prop"))):
+            import filecmp
+            if not filecmp.cmp(src, dst):
+                if os.environ['VERBOSE'] != "--verbose":
+                    sys.stderr.write("   \"%s\"\n-> \"%s\"\n" % (src.replace(NDK_DIR, "$NDK"), dst.replace(NDK_DIR, "$NDK")))
+                import errno
+                if e.errno == errno.EEXIST:
+                    sys.stderr.write("Warning: failed to copy above files due to target already exists\n")
+                else:
+                    raise
 
 def copytree(src, dst):
     """Recursively copy a directory tree.
