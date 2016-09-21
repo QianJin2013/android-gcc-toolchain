@@ -443,7 +443,7 @@ if [[ ! -f "$BIN"/.simplified_compiler_ready ]]; then
         s=${f##*$ARCH_PREFIX}; #$BIN/arm-linux-androideabi-gcc -> gcc
         ln -sf "$ARCH_PREFIX$s" "$BIN/${s%$_EXE}" || exit 1
     done
-    ln -sf "$ARCH_PREFIX"gcc$_EXE "$BIN"/cc
+    ln -sf "$ARCH_PREFIX"gcc$_EXE "$BIN"/cc || exit 1
 
     #clang/clang++ are wrapper script created by make_standalone_toolchain.py at calling time,
     # so the timestamp need be keep same (as gcc), no matter of when create toolchain
