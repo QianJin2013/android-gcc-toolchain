@@ -6,13 +6,11 @@ As an example, see [Build NodeJS for Android perfectly](https://github.com/sjite
 Tested OS:
 - **Mac**: OS X 10.11.5/10.11.6 EI Capitan (64bit)
 - **Linux**: Ubuntu 16.04 (64bit)
-- *Windows*: Windows Pro 7.
- 
-    Although not supported directly,
-    it can be used in Docker (Docker image id: `osexp2000/android-gcc-toolchain`)
+- **Windows**: Windows Pro 7 (64bit). With [GIT Bash for Windows](https://git-for-windows.github.io/) installed.
+
+Also tested in Docker (Docker image id: `osexp2000/android-gcc-toolchain`)
     via [Docker-Toolbox](https://www.docker.com/products/docker-toolbox).
     See [Features-9: Use this tool in Docker](#docker).
-
 
 ## Prerequisite
 
