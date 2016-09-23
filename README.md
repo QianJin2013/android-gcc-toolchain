@@ -15,13 +15,14 @@ Also tested in Docker (Docker image id: `osexp2000/android-gcc-toolchain`)
 ## Prerequisite
 
 NDK: tested on
- - NDK 12.1.29 ([For Mac 64bit](https://dl.google.com/android/repository/android-ndk-r12b-darwin-x86_64.zip),
-    [For Linux 64bit](https://dl.google.com/android/repository/android-ndk-r12b-linux-x86_64.zip))
+- [NDK 12.1.29](https://developer.android.com/ndk/downloads/index.html)
 
 Install Android NDK and set env var `NDK` to the dir: `export NDK=__the_top_dir_of_installed_NDK__`.
 
 Otherwise, it will guess NDK dir from env vars: ANDROID_NDK_ROOT ANDROID_NDK_HOME NDK_ROOT NDKROOT ANDROID_NDK ANDROID_SDK_HOME
  ANDROID_SDK_ROOT ANDROID_SDK ANDROID_HOME ANDROID_ROOT.
+
+*With NDK, you do not need to install python, make, awk*
 
 ## Install
 
@@ -31,7 +32,7 @@ otherwise link it to /usr/local/bin/ or add the path to the $PATH.
 <a name=ccache></a>
 If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.samba.org/) to speed up repeating compilation**.
 - Run `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux
-- `export USE_CCACHE=1` to tell android-gcc-toolchain to use CCACHE(otherwise specify --ccache every time).
+- `export USE_CCACHE=1` to tell android-gcc-toolchain to use CCACHE.
 - `export CCACHE_DIR=some_dir`(default is ~/.ccache).
 - run `ccache -M 50G` once to set max cache size(default is 5G).
 
@@ -41,20 +42,21 @@ If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.
 
 ![android-gcc](img/android-gcc.png)
 
-- Enter a dedicated shell where can run android gcc related commands easily:
+<a name="dedicated-shell-screenshot"></a>
+- Enter a dedicated shell where can run android gcc related commands easily
 
 ![android-gcc-enter](img/android-gcc-enter.png)
 
 ## Usage
 
-Enable you to enter an android-oriented cross-compile environment easily.
+Run commands in an android-oriented cross-compile environment.
 
 *Note: words in `[  ]` means may be omitted. "|" means "or". {...} means selection. (default) means can be omitted*
 <a name="options"></a>
 ```
 Usage: android-gcc-toolchain [OPTIONS] [CMD [ARGS...]]
 --------------------------------------------------------------------------------
-OPTIONS: for toolchain, env mode, CCACHE, host compiler,...
+OPTIONS: for toolchain, env mode, host compiler,...
 
 Toolchain options: specify which toolchain to use or create
  [--arch] ARCH  Android architecture:
@@ -77,13 +79,6 @@ Env mode options: Specify whether set $PATH or $CC... or $CC_target...
  -C             Set $CC_target,$CXX_target,$LINK_target,...,$NM_target
                 e.g. export CC_target=".../std-toolchains/.../bin/gcc"
 
-CCACHE option: Speed up repeating compilation
- --ccache       Means compilers(gcc/g++/cc/c++) will run via ccache command.
-                Redirect mode: android compilers use ccache.
-                $CC mode(-c): android compilers use ccache.
-                $CC_target mode(-C): android and host compilers use ccache.
-                Note: If $USE_CCACHE is 1 then this option is implied.
-
 Host compiler option: Add/remove options to host compiler forcibly
  --host  RULES  Mandatory host compiler rules. Must be a comma joined 
                 combination of available rules(Use --help-host to show).
@@ -92,10 +87,8 @@ Host compiler option: Add/remove options to host compiler forcibly
                 wrapper scripts to add/remove option then transfer to original.
 
 Other options:
- -v, --verbose  Show verbose information
+ -v, --verbose  Show verbose information, include compiler arguments
  --version      Show version of this tool
- -, --          Means the end of options and next arg is CMD. But if nothing 
-                followed, then just print output the bin dir(slash ended).
 --------------------------------------------------------------------------------
 CMD and ARGS: The external command to be run
 
@@ -103,6 +96,13 @@ CMD and ARGS: The external command to be run
                 The first non-option arg will be treated as CMD.
                 To avoid ambiguous with other option, place - or -- before CMD
  ARGS...        The arguments for the CMD
+--------------------------------------------------------------------------------
+Environment variables affecting this tool
+
+ USE_CCACHE=1   Means compilers(gcc/g++/cc/c++) will run via ccache command.
+                Redirect mode: android compilers use ccache.
+                $CC mode(-c): android compilers use ccache.
+                $CC_target mode(-C): android and host compilers use ccache.
 ```
 
 The syntax is very natural, option keyword itself(`--arch` etc.) can be omitted, order does not care. e.g.
@@ -130,7 +130,7 @@ When want run commands(such as gcc), just prepend above command to your command.
     ```
     
 <a name="dedicated-shell"></a>    
-### 2. Start a dedicated shell where can run android gcc related commands easily.
+### 2. Start a dedicated shell where can run android gcc related commands easily ([Screenshot](#dedicated-shell-screenshot)).
 
 - start an interactive shell with gcc... ready
 
@@ -138,6 +138,8 @@ When want run commands(such as gcc), just prepend above command to your command.
     android-gcc-toolchain arm64                               #bash
     android-gcc-toolchain arm64 zsh                           #zsh
     ```
+
+    See also: [About Redirect Mode](#about-redirect-mode) 
 
 - start an interactive bash with $CC... predefined
 
@@ -170,25 +172,24 @@ When want run commands(such as gcc), just prepend above command to your command.
     EOF
     $ android-gcc-toolchain arm64 -C <<< "CMD1 ARGS... && CMD2 ARGS..." 
     $ android-gcc-toolchain arm64 -C sh -c "CMD1 ARGS... && CMD2 ARGS..." 
-    $ android-gcc-toolchain arm64 -C CMD1 ARGS && android-gcc-toolchain arm64 -c CMD2 ARGS..." 
+    $ android-gcc-toolchain arm64 -C CMD1 ARGS && \ 
+      android-gcc-toolchain arm64 -c CMD2 ARGS... 
     ```
 
     *bash-only: you can use \EOF to disable pathname and var expansion*
 
 ### 3. Cross-compile an AUTOCONF project(e.g. ffmpeg) easily.
 
-- Just use `android-gcc-toolchain arm64 -` as prefix of gcc....
+- Enter a gcc... redirected environment to build.
 
-    You can treat `-` as a special command which just print toolchain bin dir(slash ended). e.g.
-    the result is `/Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-21-arm64/bin/`
-    
     ```
-    ./configure --enable-cross-compile --cross-prefix=`android-gcc-toolchain arm64 -` --target-os=linux --arch=arm64 && make
+    OTHER_FFMPEG_OPTIONS="--disable-everything --disable-doc --enable-protocol=pipe --enable-filter=scale --enable-filter=crop --enable-filter=transpose --enable-demuxer=rawvideo --enable-decoder=rawvideo --enable-muxer=image2 --enable-muxer=image2pipe --enable-muxer=mjpeg --enable-encoder=mjpeg --enable-encoder=png"
+    android-gcc-toolchain arm64 <<< "./configure --enable-cross-compile --target-os=linux --arch=arm64 $OTHER_FFMPEG_OPTIONS && make"
     ```
 
 ### 4. Cross-compile an GYP project(e.g. NodeJS) easily.
 
-- Redirect all compiler related commands to the toolchain's one.
+- Enter a gcc... redirected environment to build.
 
     ```
     android-gcc-toolchain arm64 <<< "./configure --dest-cpu=arm64 --dest-os=android --without-snapshot --without-inspector --without-intl && make"
@@ -273,7 +274,26 @@ When want run commands(such as gcc), just prepend above command to your command.
     - Use `docker cp` to copy files in/out when forgot to use volume mapping.
     - Do not specify `-t`(`--tty`) if to feed commands to docker via <<<"Here String" or <<EOF Here Document.
 
-### 10. (TODO) Support brew install, bash_autocomplete 
+### 10. Show compiler command line in verbose mode
+ 
+- Triggered by env var `AGCC_VERBOSE=1` or specifying `-v` or `--verbose` option to `android-gcc-toolchain`,
+  when any compiler process started from android-gcc-toolchain, its command line will be output. e.g.
+  
+    ```
+    $ android-gcc-toolchain -v
+    [android-9-arm] your commands here ...
+    ```
+    The output command line example:  
+    ```
+    $___ ccache '/Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-9-arm/bin/g++' \
+    $___  '-o' \
+    $___  '/tmp/a' \
+    $___  '/tmp/a.cc'
+    ```
+    Each line is prefixed by $___ which is just for grep easily. Because $___ is empty string, you can copy paste lines to
+    other place to run without modifying.
+
+### 11. (TODO) Support brew install, bash_autocomplete 
 
 ----
 
@@ -284,28 +304,50 @@ When want run commands(such as gcc), just prepend above command to your command.
 
 - If NDK is upgraded, please specify `--force` to recreate toolchains 
 
-- Basically, the toolchain is created by modified version of `$NDK/build/tools/make_standalone_toolchain.py`, 
+- Basically, the toolchain is created by on-fly modified version of `$NDK/build/tools/make_standalone_toolchain.py`, 
     Use hard link by default instead of copy
 
 - Some extra works:
+    - Removed NDK's python,make,awk,yasm,gdb,ndk-depends... (prebuilt common utilities) from toolchain bin dir.
+        As a fallback, append $NDK/prebuilt/*/bin/ to PATH so these utilities are available if no existing one.  
     - For default gnustl C++ STL only: enable use of `std::snprintf` 
         by `#inlcude <cstdio>` or `#include <string>` like libc++
         - Insert definition of `std::snprintf` to "$BIN"/../include/c++/?.?.?/cstdio
         - Append `#include <cstdio>` to "$BIN"/../include/c++/?.?.?/string
-    - For mipsel only: ln -f "$BIN"/../include/c++/?.?.?/*/bits/*.h "$BIN"/../include/c++/?.?.?/bits/ 
+    - For mipsel gnustl only: ln -f "$BIN"/../include/c++/?.?.?/*/bits/*.h "$BIN"/../include/c++/?.?.?/bits/ 
         to avoid error of `bits/c++config.h not found` when specified `-mips32r2` to gcc/g++.
+    - For CCACHE in Redirect Mode: created wrapper scripts in $BIN/../ccache/.
+    - For CCACHE compiler hash: if use non default Android API level or non default C++ stl, then to let CCACHE know 
+        compiler's include files changes, this tool set different timestamp to compiler commands gcc g++ cc c++ clang clang++. 
 
 *?.?.? means gcc version such as 4.9.x*
 
+### About NDK python,make,awk,yasm,gdb,ndk-depends... (prebuilt common utilities)
+
+- The \$NDK/prebuilt/*/bin/ are always appended to \$PATH. so these utilities are
+  always available, but not the first choice in \$PATH
+
+## About Redirect mode
+
+In this mode(means without -c|-C), the following commands are redirected to the toolchain's one.
+
+- gcc g++ cc c++ cpp clang clang++ ar as ranlib ld strip nm ...
+- readelf objdump c++filt elfedit objcopy strings size ...
+- llvm-as llvm-dis llvm-link FileCheck addr2line gcov gprof gcore dwp ...
+
+*cc is just a link to gcc*
+
+*gdb is also available from $NDK/prebuilt/*/bin/ which already appended to $PATH*
+
 ## About env vars passed to CMD
 
-- `PATH`: will be changed under certain conditions:
+- PATH: will be changed under certain conditions:
     use [Redirect mode](#about-redirect-mode) 
     or use [Mandatory host compiler rules](#host-compiler-rules))
     or use CCACHE([About how CCACHE are used](#about-how-ccache-are-used)). 
     When called recursively, it will be restored first
 
-- GYP_DEFINES: will be set to "host_os=<mac|linux>" to specify host_os for gyp.
+- GYP_DEFINES: will be set to "host_os=<mac|linux|$OSTYPE>" to specify host_os for gyp.
 
 - BIN AGCC_BIN AGCC_HACK_DIR: will be set for cleaner and as mnemonics.
 
@@ -313,22 +355,9 @@ When want run commands(such as gcc), just prepend above command to your command.
  - CC CXX LINK AR CC_target CXX_target LINK_target AR_target
  - AS RANLIB LD STRIP NM AS_target RANLIB_target LD_target STRIP_target NM_target
 
-## About Redirect mode
-
-In this mode(means without -c|-C), the following commands are redirected to the toolchain's one.
-
-- cc(->gcc) gcc g++ c++ cpp clang clang++ ar ar as ranlib ld strip ...
-- readelf objdump nm c++filt elfedit objcopy strings size ...
-- addr2line gcov gprof gcore dwp ...
-- llvm-as llvm-dis llvm-link FileCheck ...
-
-### About NDK python,make,awk,yasm,gdb,ndk-depends... (prebuilt common utilities)
-
-- The \$NDK/prebuilt/*/bin/ are always appended to \$PATH. so these utilities are
-  always available, but not the first choice in \$PATH
-
 ## About how CCACHE is used
 
+- Triggered by env var `USE_CCACHE=1`
 - Supersede android compilers
     - Redirect mode: register wrapper scripts via $PATH
     - $CC mode(`-c`): change $CC... to use ccache command
@@ -342,7 +371,7 @@ In this mode(means without -c|-C), the following commands are redirected to the 
 <a name="host-compiler-rules"></a>
 ## About Mandatory host compiler rules (--host RULES): 
 
-This tool provide wrapper scripts to supersede compiler commands(gcc|g++|cc|c++) via $PATH, optionally.
+This tool provide wrapper scripts to supersede compiler commands(gcc|g++|cc|c++|clang|clang++) via $PATH, optionally.
 These wrapper scripts 
 - smartly find original compiler command in $PATH behind itself, 
 - add or remove options then transfer to original compiler command.
