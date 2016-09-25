@@ -33,8 +33,8 @@ otherwise link it to /usr/local/bin/ or add the path to the $PATH.
 If you clean & compile repeatedly, **you'd better setup [CCACHE](https://ccache.samba.org/) to speed up repeating compilation**.
 - Run `brew install ccache` on Mac or `sudo apt-get install ccache` on Linux
 - `export USE_CCACHE=1` to tell android-gcc-toolchain to use CCACHE.
-- `export CCACHE_DIR=some_dir`(default is ~/.ccache).
-- run `ccache -M 50G` once to set max cache size(default is 5G).
+- optional: `export CCACHE_DIR=some_dir_in_fast_disk`(default is ~/.ccache).
+- optional: run `ccache -M 50G` once to set max cache size(default is 5G).
 
 ## Screenshot
 
