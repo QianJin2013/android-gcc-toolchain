@@ -7,6 +7,6 @@ RUN sudo DEBIAN_FRONTEND=noninteractive apt-get install -y git && \
 ENV PATH=$PATH:/home/devuser/android-gcc-toolchain
 
 #make android-9-arm toolchain
-RUN android-gcc-toolchain -
+RUN android-gcc-toolchain which gcc
 
 ENTRYPOINT ["android-gcc-toolchain"]
