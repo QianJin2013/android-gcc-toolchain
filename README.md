@@ -256,13 +256,13 @@ Environment variables affecting this tool
       and the `HOST_DIR_OR_FILE` must be converted to `/c/Users/...` style. Besides, need env var MSYS_NO_PATHCONV=1**
     - Use `docker cp` to copy files in/out when forgot to use volume mapping.
 
-<a name="show-compiler-command-line></a>
+<a name="show-compiler-command-line"></a>
 ### 10. Show compiler command line in verbose mode
  
 - Triggered by env var `AGCC_VERBOSE=1` or specifying `-v` or `--verbose` option to `android-gcc-toolchain`,
     when any compiler(gcc g++ cc c++ clang clang++ ar as ranlib ld strip nm) process
     started from android-gcc-toolchain, its command line will be output.
-  
+
     The output command line example:  
     ```
     $___ ccache '/Users/q/Library/Android/sdk/ndk-bundle/std-toolchains/android-9-arm/bin/arm-linux-androideabi-c++' \
